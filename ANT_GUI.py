@@ -61,6 +61,7 @@ class CodonView(ANTBaseDrawingClass):
 		#set up a dictionary to keep track of which color belongs to what object
 		self.catalog = {} #for matching features with the unique colors
 		self.catalog['(255, 255, 255, 255)'] = False #the background is white, have to add that key
+		self.catalog['(-1, -1, -1, 255)'] = False #Seems like on macs the background gives different values
 		self.unique_color = (0,0,0)
 
 		#set the initial value of a few variables
