@@ -60,8 +60,6 @@ class CodonView(ANTBaseDrawingClass):
 
 		#set up a dictionary to keep track of which color belongs to what object
 		self.catalog = {} #for matching features with the unique colors
-		self.catalog['(255, 255, 255, 255)'] = False #the background is white, have to add that key
-		self.catalog['(-1, -1, -1, 255)'] = False #Seems like on macs the background gives different values
 		self.unique_color = (0,0,0)
 
 		#set the initial value of a few variables
@@ -574,7 +572,7 @@ class CodonView(ANTBaseDrawingClass):
 		dc = wx.ClientDC(self) #get the client dc
 		x, y = self.ScreenToClient(wx.GetMousePosition()) #get coordinate of mouse event
 		pixel_color = self.hidden_dc.GetPixel(x,y) #use that coordinate to find pixel on the hidden dc
-		return self.catalog[str(pixel_color)] #return the amino acid
+		return self.catalog.get(str(pixel_color)) #return the amino acid
 
 
 	def OnLeftUp(self, event):
@@ -584,7 +582,7 @@ class CodonView(ANTBaseDrawingClass):
 		If the amino acid was already chosen, then remove it from the selection.
 		'''
 		amino_acid = self.HitTest()
-		if amino_acid is not False:
+		if amino_acid is not None:
 			if amino_acid not in self.target:
 				self.target.append(amino_acid)
 			elif amino_acid in self.target:
