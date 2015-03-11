@@ -105,6 +105,266 @@ class CodonView(ANTBaseDrawingClass):
 		Method for drawing stuff on gcdc.
 		This method is responsible for drawing the entire user interface, with the exception of buttons. I add those later.
 		'''
+
+		self.Draw_wheel(dc)
+
+
+	def Draw_properties(self, dc):
+		'''
+		This is the amino acid properties view.
+		Not yet finished!!!!
+		'''
+		
+		#################
+		self.xc = 850/3 #centre of codon circle in x
+		self.yc = 450/2 #centre of codon circle in y
+		self.Radius = self.yc/1.2
+		self.unique_color = (0,0,0)
+
+		dc.SetBackground(wx.Brush("White"))
+		dc.Clear() # make sure you clear the bitmap!
+		gcdc = wx.GCDC(dc) #make gcdc from the dc (for use of transparency and antialiasing)
+
+		#make a hidden dc to which features can be drawn in unique colors and later used for hittests. This drawing only exists in memory.
+		self.hidden_dc = wx.MemoryDC()
+		self.hidden_dc.SelectObject(wx.EmptyBitmap(self.ClientSize[0], self.ClientSize[1]))
+		self.hidden_dc.SetBackground(wx.Brush("White"))
+		self.hidden_dc.Clear() # make sure you clear the bitmap!
+
+		#set what colors the different fields should have
+		target_color = '#CCFF66' #chosen amino acids
+		possible_color = '#FFFF66' #amino acid that may still be chosen
+		offtarget_color = '#FF9966' #off-target amino acids
+		nucleotide_color = '#8B835F' #standard nucleotide color
+		coding_nucleotide_color = '#4B4424' #for coloring the nucleotides encoded by the degenerate codon
+		line_color = '#000000' #for lines
+		first_nuc_background = '#ffe7ab' #background of first nucleotide
+		second_nuc_background = '#ffd976' #background of second nucleotide
+		third_nuc_background = '#ffc700' #background of third nucleotide
+		aa_background = '#FFFFFF' #background color for amino acids
+		aa_highlight = '#FF0000' #highlight color for the amino acid that mouse pointer hovers over
+
+		font = wx.Font(pointSize=15, family=wx.FONTFAMILY_SWISS, style=wx.FONTWEIGHT_NORMAL, weight=wx.FONTWEIGHT_BOLD)
+		gcdc.SetFont(font)
+		
+
+		sf = 2 #scaling factor
+		transparency = 80 #how much transparancy
+		wi = 3 #stroke width
+
+		#hydrophobic
+		gcdc.SetPen(wx.Pen(colour=(85,123,12,255), width=wi))
+		gcdc.SetBrush(wx.Brush((85,123,12,transparency)))
+		x = -90.70
+		y = -63.49
+		gcdc.DrawEllipse(self.xc+x*sf, self.yc+y*sf, 104.43*sf, 125.02*sf) 
+
+		gcdc.SetTextForeground((85,123,12))
+		gcdc.DrawText('Hydrophobic', self.xc-114.23*sf, self.yc+-68.64*sf)
+
+
+		#small
+		gcdc.SetPen(wx.Pen(colour=(13,109,167,255), width=wi))
+		gcdc.SetBrush(wx.Brush((13,109,167,transparency)))
+		x = -51.78
+		y = -89.48
+		gcdc.DrawEllipse(self.xc+x*sf, self.yc+y*sf, 118*sf, 111*sf) 
+
+		gcdc.SetTextForeground((13,109,167))
+		gcdc.DrawText('Small', self.xc+49.11*sf, self.yc+-83.56*sf)
+
+
+		#polar
+		gcdc.SetPen(wx.Pen(colour=(142,11,16,255), width=wi))
+		gcdc.SetBrush(wx.Brush((142,11,16,transparency)))
+		x = -48.05
+		y = -33.58
+		gcdc.DrawEllipse(self.xc+x*sf, self.yc+y*sf, 125*sf, 125*sf)
+
+		gcdc.SetTextForeground((142,11,16))
+		gcdc.DrawText('Polar', self.xc+74.39*sf, self.yc+-10.31*sf) 
+
+
+		#tiny
+		gcdc.SetPen(wx.Pen(colour=(240,217,51,255), width=wi))
+		gcdc.SetBrush(wx.Brush((240,217,51,transparency)))
+		x = -22.06
+		y = -51.72
+		gcdc.DrawEllipse(self.xc+x*sf, self.yc+y*sf, 65.70*sf, 45.10*sf) 
+
+		gcdc.SetTextForeground((240,217,51))
+		gcdc.DrawText('Tiny', self.xc+27.00*sf, self.yc+-59.72*sf) 
+
+
+		#aliphatic
+		gcdc.SetPen(wx.Pen(colour=(101,32,51,255), width=wi))
+		gcdc.SetBrush(wx.Brush((101,32,51,transparency)))
+		x = -74.03
+		y = -47.80
+		gcdc.DrawEllipse(self.xc+x*sf, self.yc+y*sf, 40.69*sf, 39.22*sf) 
+
+		gcdc.SetTextForeground((101,32,51))
+		gcdc.DrawText('Aliphatic', self.xc-129.18*sf, self.yc+-38.23*sf) 
+
+
+		#aromatic
+		gcdc.SetPen(wx.Pen(colour=(53,0,78,255), width=wi))
+		gcdc.SetBrush(wx.Brush((53,0,78,transparency)))
+		x = -73.54
+		y = 25.74
+		gcdc.DrawEllipse(self.xc+x*sf, self.yc+y*sf, 95.60*sf, 29.42*sf) 
+
+		gcdc.SetTextForeground((53,0,78))
+		gcdc.DrawText('Aromatic', self.xc-88.46*sf, self.yc+63.78*sf) 
+
+
+		#charged
+		gcdc.SetPen(wx.Pen(colour=(255,138,41,255), width=wi))
+		gcdc.SetBrush(wx.Brush((255,138,41,transparency)))
+		x = -4.93
+		y = 22.76
+		gcdc.DrawEllipse(self.xc+x*sf, self.yc+y*sf, 64.79*sf, 47.14*sf) 
+
+		gcdc.SetTextForeground((255,138,41))
+		gcdc.DrawText('Charged', self.xc+74.96*sf, self.yc+57.17*sf) 
+
+
+		#positive
+		gcdc.SetPen(wx.Pen(colour=(23,105,117,255), width=wi))
+		gcdc.SetBrush(wx.Brush((23,105,117,transparency)))
+		x = 1.53
+		y = 25.31
+		gcdc.DrawEllipse(self.xc+x*sf, self.yc+y*sf, 40*sf, 40*sf) 
+
+		gcdc.SetTextForeground((23,105,117))
+		gcdc.DrawText('Positive', self.xc+-4.31*sf, self.yc+74.40*sf) 
+  
+
+		#unnatural
+		#if... unnatural code...
+		#add unnatural text
+
+
+		### Draw amino acids and circles around them ###
+		font = wx.Font(pointSize=17, family=wx.FONTFAMILY_SWISS, style=wx.FONTWEIGHT_NORMAL, weight=wx.FONTWEIGHT_BOLD)
+		gcdc.SetFont(font)
+		gcdc.SetTextForeground((0,0,0))
+
+		#A
+		aax = -7.96
+		aay = -43
+		gcdc.DrawText('A', self.xc+aax*sf, self.yc+aay*sf) 
+
+		#S
+		aax = 25.29
+		aay = -24
+		gcdc.DrawText('S', self.xc+aax*sf, self.yc+aay*sf) 
+
+		#G
+		aax = 15
+		aay = -46
+		gcdc.DrawText('G', self.xc+aax*sf, self.yc+aay*sf) 
+
+		#P
+		aax = -32
+		aay = -40
+		gcdc.DrawText('P', self.xc+aax*sf, self.yc+aay*sf) 
+
+		#C
+		aax = -2
+		aay = -24
+		gcdc.DrawText('C', self.xc+aax*sf, self.yc+aay*sf) 
+
+		#C-s-s
+		aax = -40
+		aay = -60
+		gcdc.DrawText('C', self.xc+aax*sf, self.yc+aay*sf) 
+
+		#V
+		aax = -45
+		aay = -36
+		gcdc.DrawText('V', self.xc+aax*sf, self.yc+aay*sf) 
+
+		#I
+		aax = -64
+		aay = -40
+		gcdc.DrawText('I', self.xc+aax*sf, self.yc+aay*sf) 
+
+		#L
+		aax = -58
+		aay = -27
+		gcdc.DrawText('L', self.xc+aax*sf, self.yc+aay*sf) 
+
+		#M
+		aax = -76
+		aay = -5
+		gcdc.DrawText('M', self.xc+aax*sf, self.yc+aay*sf) 
+
+		#F
+		aax = -61
+		aay = 35
+		gcdc.DrawText('F', self.xc+aax*sf, self.yc+aay*sf) 
+
+		#Y
+		aax = -41
+		aay = 30
+		gcdc.DrawText('Y', self.xc+aax*sf, self.yc+aay*sf) 
+
+		#W
+		aax = -29
+		aay = 41
+		gcdc.DrawText('W', self.xc+aax*sf, self.yc+aay*sf) 
+
+		#H
+		aax = 7
+		aay = 35
+		gcdc.DrawText('H', self.xc+aax*sf, self.yc+aay*sf) 
+
+		#R
+		aax = 23
+		aay = 40
+		gcdc.DrawText('R', self.xc+aax*sf, self.yc+aay*sf) 
+
+		#K
+		aax = 13
+		aay = 50
+		gcdc.DrawText('K', self.xc+aax*sf, self.yc+aay*sf) 
+
+		#D
+		aax = 46
+		aay = 34
+		gcdc.DrawText('D', self.xc+aax*sf, self.yc+aay*sf) 
+
+		#E
+		aax = 44
+		aay = 50
+		gcdc.DrawText('E', self.xc+aax*sf, self.yc+aay*sf) 
+
+		#N
+		aax = 43
+		aay = -12
+		gcdc.DrawText('N', self.xc+aax*sf, self.yc+aay*sf) 
+
+		#Q
+		aax = 62
+		aay = 12
+		gcdc.DrawText('Q', self.xc+aax*sf, self.yc+aay*sf) 
+
+		#T
+		aax = -14
+		aay = -6
+		gcdc.DrawText('T', self.xc+aax*sf, self.yc+aay*sf) 
+
+		#U
+#		aax =
+#		aay = 
+#		gcdc.DrawText('U', self.xc+aax*sf, self.yc+aay*sf) 
+
+
+	def Draw_wheel(self, dc):
+		'''
+		This is the codon wheel view.
+		'''
 		
 		#################
 		self.xc = 850/3 #centre of codon circle in x
