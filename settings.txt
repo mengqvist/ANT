@@ -10,11 +10,11 @@ AAs_to_exclude = []
 
 
 
-# Specify user-defined codon table #1001. 
+# Specify the user-defined codon table #1001. 
 # the codon table is read from top to bottom in columns.
-# code specifes the name of the codon table.
-# AAs specifies the encoded amino acid.
-# Starts specifies which codons are available as start codons (this is not currently important for the ANT functionality.
+# 'code' specifes the name of the codon table.
+# 'AAs' specifies the encoded amino acid.
+# 'Starts' specifies which codons are available as start codons (this is not currently important for the ANT functionality.
 # The user may modify code, AAs and Starts. The Base1, Base2 and Base3 variables should not be changed.
 # U is used for unnatural amino acid.
 
