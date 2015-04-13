@@ -25,7 +25,7 @@
 #Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #
-#Get source code at: To be added....
+#Get source code at: https://github.com/mengqvist/ANT
 #
 
 
@@ -57,6 +57,7 @@ class CodonView(ANTBaseDrawingClass):
 		self.offtarget = []
 		self.AA_count = {}
 		self.text_edit_active = False #to keep track of whether text is being edited
+		self.properties_layout = False #decides whether codon wheel or AA properties view is drawn (True == properties view)
 
 		#set up a dictionary to keep track of which color belongs to what object
 		self.catalog = {} #for matching features with the unique colors
@@ -66,6 +67,19 @@ class CodonView(ANTBaseDrawingClass):
 		self.xc = 0
 		self.yc = 0
 		self.table = 1 #codon table
+
+		#set what colors the different fields should have
+		self.target_color = '#CCFF66' #chosen amino acids
+		self.possible_color = '#FFFF66' #amino acid that may still be chosen
+		self.offtarget_color = '#FF9966' #off-target amino acids
+		self.nucleotide_color = '#8B835F' #standard nucleotide color
+		self.coding_nucleotide_color = '#4B4424' #for coloring the nucleotides encoded by the degenerate codon
+		self.line_color = '#000000' #for lines
+		self.first_nuc_background = '#ffe7ab' #background of first nucleotide
+		self.second_nuc_background = '#ffd976' #background of second nucleotide
+		self.third_nuc_background = '#ffc700' #background of third nucleotide
+		self.aa_background = '#FFFFFF' #background color for amino acids
+		self.aa_highlight = '#FF0000' #highlight color for the amino acid that mouse pointer hovers over
 
 		#initialize
 		super(CodonView, self).__init__(parent, wx.ID_ANY)
@@ -102,14 +116,41 @@ class CodonView(ANTBaseDrawingClass):
 
 	def Draw(self, dc):
 		'''
-		Method for drawing stuff on gcdc.
+		Method for drawing stuff on self.gcdc.
 		This method is responsible for drawing the entire user interface, with the exception of buttons. I add those later.
 		'''
 
-		self.Draw_wheel(dc)
+		#set up the gcdc
+		dc.SetBackground(wx.Brush("White"))
+		dc.Clear() # make sure you clear the bitmap!
+		self.gcdc = wx.GCDC(dc) #make gcdc from the dc (for use of transparency and antialiasing)
+
+		#make a hidden dc to which features can be drawn in unique colors and later used for hittests. This drawing only exists in memory.
+		self.unique_color = (0,0,0)
+		self.hidden_dc = wx.MemoryDC()
+		self.hidden_dc.SelectObject(wx.EmptyBitmap(self.ClientSize[0], self.ClientSize[1]))
+		self.hidden_dc.SetBackground(wx.Brush("White"))
+		self.hidden_dc.Clear() # make sure you clear the bitmap!
 
 
-	def Draw_properties(self, dc):
+		#draw amino acids in one of two representations
+		if self.properties_layout is True:
+			self.Draw_properties()
+		else:
+			self.Draw_wheel()
+
+		#draw key explaining highlighting colors
+		self.Draw_key()
+
+		#draw degenerate nucleotide
+		self.Draw_codon()
+
+		#draw graph showing fequency of amino acids encoded
+		self.Draw_graph()
+
+
+
+	def Draw_properties(self):
 		'''
 		This is the amino acid properties view.
 		Not yet finished!!!!
@@ -119,249 +160,201 @@ class CodonView(ANTBaseDrawingClass):
 		self.xc = 850/3 #centre of codon circle in x
 		self.yc = 450/2 #centre of codon circle in y
 		self.Radius = self.yc/1.2
-		self.unique_color = (0,0,0)
 
-		dc.SetBackground(wx.Brush("White"))
-		dc.Clear() # make sure you clear the bitmap!
-		gcdc = wx.GCDC(dc) #make gcdc from the dc (for use of transparency and antialiasing)
 
-		#make a hidden dc to which features can be drawn in unique colors and later used for hittests. This drawing only exists in memory.
-		self.hidden_dc = wx.MemoryDC()
-		self.hidden_dc.SelectObject(wx.EmptyBitmap(self.ClientSize[0], self.ClientSize[1]))
-		self.hidden_dc.SetBackground(wx.Brush("White"))
-		self.hidden_dc.Clear() # make sure you clear the bitmap!
-
-		#set what colors the different fields should have
-		target_color = '#CCFF66' #chosen amino acids
-		possible_color = '#FFFF66' #amino acid that may still be chosen
-		offtarget_color = '#FF9966' #off-target amino acids
-		nucleotide_color = '#8B835F' #standard nucleotide color
-		coding_nucleotide_color = '#4B4424' #for coloring the nucleotides encoded by the degenerate codon
-		line_color = '#000000' #for lines
-		first_nuc_background = '#ffe7ab' #background of first nucleotide
-		second_nuc_background = '#ffd976' #background of second nucleotide
-		third_nuc_background = '#ffc700' #background of third nucleotide
-		aa_background = '#FFFFFF' #background color for amino acids
-		aa_highlight = '#FF0000' #highlight color for the amino acid that mouse pointer hovers over
-
-		font = wx.Font(pointSize=15, family=wx.FONTFAMILY_SWISS, style=wx.FONTWEIGHT_NORMAL, weight=wx.FONTWEIGHT_BOLD)
-		gcdc.SetFont(font)
+		pnt_size = 15
+		font = wx.Font(pointSize=pnt_size, family=wx.FONTFAMILY_SWISS, style=wx.FONTWEIGHT_NORMAL, weight=wx.FONTWEIGHT_BOLD)
+		self.gcdc.SetFont(font)
 		
 
-		sf = 2 #scaling factor
+		sf = 2 #scaling factor (determines size of drawing)
+
+
+		### Draw the ven diagram circles with labels ###
 		transparency = 80 #how much transparancy
 		wi = 3 #stroke width
 
 		#hydrophobic
-		gcdc.SetPen(wx.Pen(colour=(85,123,12,255), width=wi))
-		gcdc.SetBrush(wx.Brush((85,123,12,transparency)))
+		self.gcdc.SetPen(wx.Pen(colour=(85,123,12,255), width=wi))
+		self.gcdc.SetBrush(wx.Brush((85,123,12,transparency)))
 		x = -90.70
 		y = -63.49
-		gcdc.DrawEllipse(self.xc+x*sf, self.yc+y*sf, 104.43*sf, 125.02*sf) 
+		self.gcdc.DrawEllipse(self.xc+x*sf, self.yc+y*sf, 104.43*sf, 125.02*sf) 
 
-		gcdc.SetTextForeground((85,123,12))
-		gcdc.DrawText('Hydrophobic', self.xc-114.23*sf, self.yc+-68.64*sf)
+		self.gcdc.SetTextForeground((85,123,12))
+		self.gcdc.DrawText('Hydrophobic', self.xc-114.23*sf, self.yc+-68.64*sf)
 
 
 		#small
-		gcdc.SetPen(wx.Pen(colour=(13,109,167,255), width=wi))
-		gcdc.SetBrush(wx.Brush((13,109,167,transparency)))
+		self.gcdc.SetPen(wx.Pen(colour=(13,109,167,255), width=wi))
+		self.gcdc.SetBrush(wx.Brush((13,109,167,transparency)))
 		x = -51.78
 		y = -89.48
-		gcdc.DrawEllipse(self.xc+x*sf, self.yc+y*sf, 118*sf, 111*sf) 
+		self.gcdc.DrawEllipse(self.xc+x*sf, self.yc+y*sf, 118*sf, 111*sf) 
 
-		gcdc.SetTextForeground((13,109,167))
-		gcdc.DrawText('Small', self.xc+49.11*sf, self.yc+-83.56*sf)
+		self.gcdc.SetTextForeground((13,109,167))
+		self.gcdc.DrawText('Small', self.xc+49.11*sf, self.yc+-83.56*sf)
 
 
 		#polar
-		gcdc.SetPen(wx.Pen(colour=(142,11,16,255), width=wi))
-		gcdc.SetBrush(wx.Brush((142,11,16,transparency)))
+		self.gcdc.SetPen(wx.Pen(colour=(142,11,16,255), width=wi))
+		self.gcdc.SetBrush(wx.Brush((142,11,16,transparency)))
 		x = -48.05
 		y = -33.58
-		gcdc.DrawEllipse(self.xc+x*sf, self.yc+y*sf, 125*sf, 125*sf)
+		self.gcdc.DrawEllipse(self.xc+x*sf, self.yc+y*sf, 125*sf, 125*sf)
 
-		gcdc.SetTextForeground((142,11,16))
-		gcdc.DrawText('Polar', self.xc+74.39*sf, self.yc+-10.31*sf) 
+		self.gcdc.SetTextForeground((142,11,16))
+		self.gcdc.DrawText('Polar', self.xc+74.39*sf, self.yc+-10.31*sf) 
 
 
 		#tiny
-		gcdc.SetPen(wx.Pen(colour=(240,217,51,255), width=wi))
-		gcdc.SetBrush(wx.Brush((240,217,51,transparency)))
+		self.gcdc.SetPen(wx.Pen(colour=(240,217,51,255), width=wi))
+		self.gcdc.SetBrush(wx.Brush((240,217,51,transparency)))
 		x = -22.06
 		y = -51.72
-		gcdc.DrawEllipse(self.xc+x*sf, self.yc+y*sf, 65.70*sf, 45.10*sf) 
+		self.gcdc.DrawEllipse(self.xc+x*sf, self.yc+y*sf, 65.70*sf, 45.10*sf) 
 
-		gcdc.SetTextForeground((240,217,51))
-		gcdc.DrawText('Tiny', self.xc+27.00*sf, self.yc+-59.72*sf) 
+		self.gcdc.SetTextForeground((240,217,51))
+		self.gcdc.DrawText('Tiny', self.xc+27.00*sf, self.yc+-59.72*sf) 
 
 
 		#aliphatic
-		gcdc.SetPen(wx.Pen(colour=(101,32,51,255), width=wi))
-		gcdc.SetBrush(wx.Brush((101,32,51,transparency)))
+		self.gcdc.SetPen(wx.Pen(colour=(101,32,51,255), width=wi))
+		self.gcdc.SetBrush(wx.Brush((101,32,51,transparency)))
 		x = -74.03
 		y = -47.80
-		gcdc.DrawEllipse(self.xc+x*sf, self.yc+y*sf, 40.69*sf, 39.22*sf) 
+		self.gcdc.DrawEllipse(self.xc+x*sf, self.yc+y*sf, 40.69*sf, 39.22*sf) 
 
-		gcdc.SetTextForeground((101,32,51))
-		gcdc.DrawText('Aliphatic', self.xc-129.18*sf, self.yc+-38.23*sf) 
+		self.gcdc.SetTextForeground((101,32,51))
+		self.gcdc.DrawText('Aliphatic', self.xc-129.18*sf, self.yc+-38.23*sf) 
 
 
 		#aromatic
-		gcdc.SetPen(wx.Pen(colour=(53,0,78,255), width=wi))
-		gcdc.SetBrush(wx.Brush((53,0,78,transparency)))
+		self.gcdc.SetPen(wx.Pen(colour=(53,0,78,255), width=wi))
+		self.gcdc.SetBrush(wx.Brush((53,0,78,transparency)))
 		x = -73.54
 		y = 25.74
-		gcdc.DrawEllipse(self.xc+x*sf, self.yc+y*sf, 95.60*sf, 29.42*sf) 
+		self.gcdc.DrawEllipse(self.xc+x*sf, self.yc+y*sf, 95.60*sf, 29.42*sf) 
 
-		gcdc.SetTextForeground((53,0,78))
-		gcdc.DrawText('Aromatic', self.xc-88.46*sf, self.yc+63.78*sf) 
+		self.gcdc.SetTextForeground((53,0,78))
+		self.gcdc.DrawText('Aromatic', self.xc-118.46*sf, self.yc+43.78*sf) 
 
 
 		#charged
-		gcdc.SetPen(wx.Pen(colour=(255,138,41,255), width=wi))
-		gcdc.SetBrush(wx.Brush((255,138,41,transparency)))
+		self.gcdc.SetPen(wx.Pen(colour=(255,138,41,255), width=wi))
+		self.gcdc.SetBrush(wx.Brush((255,138,41,transparency)))
 		x = -4.93
 		y = 22.76
-		gcdc.DrawEllipse(self.xc+x*sf, self.yc+y*sf, 64.79*sf, 47.14*sf) 
+		self.gcdc.DrawEllipse(self.xc+x*sf, self.yc+y*sf, 64.79*sf, 47.14*sf) 
 
-		gcdc.SetTextForeground((255,138,41))
-		gcdc.DrawText('Charged', self.xc+74.96*sf, self.yc+57.17*sf) 
+		self.gcdc.SetTextForeground((255,138,41))
+		self.gcdc.DrawText('Charged', self.xc+74.96*sf, self.yc+57.17*sf) 
 
 
 		#positive
-		gcdc.SetPen(wx.Pen(colour=(23,105,117,255), width=wi))
-		gcdc.SetBrush(wx.Brush((23,105,117,transparency)))
+		self.gcdc.SetPen(wx.Pen(colour=(23,105,117,255), width=wi))
+		self.gcdc.SetBrush(wx.Brush((23,105,117,transparency)))
 		x = 1.53
 		y = 25.31
-		gcdc.DrawEllipse(self.xc+x*sf, self.yc+y*sf, 40*sf, 40*sf) 
+		self.gcdc.DrawEllipse(self.xc+x*sf, self.yc+y*sf, 40*sf, 40*sf) 
 
-		gcdc.SetTextForeground((23,105,117))
-		gcdc.DrawText('Positive', self.xc+-4.31*sf, self.yc+74.40*sf) 
-  
+		self.gcdc.SetTextForeground((23,105,117))
+		self.gcdc.DrawText('Positive', self.xc+-4.31*sf, self.yc+74.40*sf) 
+ 
+		#stop
+		self.gcdc.SetPen(wx.Pen(colour=(128,128,128,255), width=wi))
+		self.gcdc.SetBrush(wx.Brush((128,128,128,transparency)))
+		x = -130
+		y = 75
+		self.gcdc.DrawEllipse(self.xc+x*sf, self.yc+y*sf, 49*sf, 20*sf) 
 
-		#unnatural
-		#if... unnatural code...
-		#add unnatural text
+		self.gcdc.SetTextForeground((128,128,128))
+		self.gcdc.DrawText('Stop', self.xc-75*sf, self.yc+81*sf) 
+ 
+
+		#define amino acid positions
+		aminoAcids = dict(A = dict(aax=-7.96, aay=-43, text='A'),
+		S = dict(aax = 25.29, aay = -24, text = 'S'),
+		G = dict(aax = 15, aay = -46, text = 'G'),
+		P = dict(aax = -5, aay = -75, text = 'P'),
+		C = dict(aax = -2, aay = -24, text = 'C'),
+		V = dict(aax = -45, aay = -36, text = 'V'),
+		I = dict(aax = -64, aay = -40, text = 'I'),
+		L = dict(aax = -58, aay = -27, text = 'L'),
+		M = dict(aax = -76, aay = -5, text = 'M'),
+		F = dict(aax = -61, aay = 35, text = 'F'),
+		Y = dict(aax = -41, aay = 30, text = 'Y'),
+		W = dict(aax = -29, aay = 41, text = 'W'),
+		H = dict(aax = 7, aay = 35, text = 'H'),
+		R = dict(aax = 23, aay = 40, text = 'R'),
+		K = dict(aax = 13, aay = 50, text = 'K'),
+		D = dict(aax = 46, aay = 34, text = 'D'),
+		E = dict(aax = 44, aay = 50, text = 'E'),
+		N = dict(aax = 43, aay = -12, text = 'N'),
+		Q = dict(aax = 62, aay = 12, text = 'Q'),
+		T = dict(aax = -14, aay = -6, text = 'T'))
+
+		#I need to add the stop codon extra because dict() does not like the *
+		aminoAcids['*'] = dict(aax = -109, aay = 80, text = '*')
+
+		#special case for when codon table containing unnatural AA is chosen
+		if self.table == '1001':
+			aminoAcids['U'] = dict(aax = -110, aay = 105, text = 'U')
+
+			#unnatural
+			self.gcdc.SetPen(wx.Pen(colour=(0,170,136,255), width=wi))
+			self.gcdc.SetBrush(wx.Brush((0,170,136,transparency)))
+			x = -130
+			y = 100
+			self.gcdc.DrawEllipse(self.xc+x*sf, self.yc+y*sf, 49*sf, 20*sf) 
+
+			self.gcdc.SetTextForeground((0,170,136))
+			self.gcdc.DrawText('Unnatural', self.xc-75*sf, self.yc+106*sf) 
 
 
 		### Draw amino acids and circles around them ###
 		font = wx.Font(pointSize=17, family=wx.FONTFAMILY_SWISS, style=wx.FONTWEIGHT_NORMAL, weight=wx.FONTWEIGHT_BOLD)
-		gcdc.SetFont(font)
-		gcdc.SetTextForeground((0,0,0))
+		self.gcdc.SetFont(font)
+		self.gcdc.SetTextForeground((0,0,0))
 
-		#A
-		aax = -7.96
-		aay = -43
-		gcdc.DrawText('A', self.xc+aax*sf, self.yc+aay*sf) 
-
-		#S
-		aax = 25.29
-		aay = -24
-		gcdc.DrawText('S', self.xc+aax*sf, self.yc+aay*sf) 
-
-		#G
-		aax = 15
-		aay = -46
-		gcdc.DrawText('G', self.xc+aax*sf, self.yc+aay*sf) 
-
-		#P
-		aax = -32
-		aay = -40
-		gcdc.DrawText('P', self.xc+aax*sf, self.yc+aay*sf) 
-
-		#C
-		aax = -2
-		aay = -24
-		gcdc.DrawText('C', self.xc+aax*sf, self.yc+aay*sf) 
-
-		#C-s-s
-		aax = -40
-		aay = -60
-		gcdc.DrawText('C', self.xc+aax*sf, self.yc+aay*sf) 
-
-		#V
-		aax = -45
-		aay = -36
-		gcdc.DrawText('V', self.xc+aax*sf, self.yc+aay*sf) 
-
-		#I
-		aax = -64
-		aay = -40
-		gcdc.DrawText('I', self.xc+aax*sf, self.yc+aay*sf) 
-
-		#L
-		aax = -58
-		aay = -27
-		gcdc.DrawText('L', self.xc+aax*sf, self.yc+aay*sf) 
-
-		#M
-		aax = -76
-		aay = -5
-		gcdc.DrawText('M', self.xc+aax*sf, self.yc+aay*sf) 
-
-		#F
-		aax = -61
-		aay = 35
-		gcdc.DrawText('F', self.xc+aax*sf, self.yc+aay*sf) 
-
-		#Y
-		aax = -41
-		aay = 30
-		gcdc.DrawText('Y', self.xc+aax*sf, self.yc+aay*sf) 
-
-		#W
-		aax = -29
-		aay = 41
-		gcdc.DrawText('W', self.xc+aax*sf, self.yc+aay*sf) 
-
-		#H
-		aax = 7
-		aay = 35
-		gcdc.DrawText('H', self.xc+aax*sf, self.yc+aay*sf) 
-
-		#R
-		aax = 23
-		aay = 40
-		gcdc.DrawText('R', self.xc+aax*sf, self.yc+aay*sf) 
-
-		#K
-		aax = 13
-		aay = 50
-		gcdc.DrawText('K', self.xc+aax*sf, self.yc+aay*sf) 
-
-		#D
-		aax = 46
-		aay = 34
-		gcdc.DrawText('D', self.xc+aax*sf, self.yc+aay*sf) 
-
-		#E
-		aax = 44
-		aay = 50
-		gcdc.DrawText('E', self.xc+aax*sf, self.yc+aay*sf) 
-
-		#N
-		aax = 43
-		aay = -12
-		gcdc.DrawText('N', self.xc+aax*sf, self.yc+aay*sf) 
-
-		#Q
-		aax = 62
-		aay = 12
-		gcdc.DrawText('Q', self.xc+aax*sf, self.yc+aay*sf) 
-
-		#T
-		aax = -14
-		aay = -6
-		gcdc.DrawText('T', self.xc+aax*sf, self.yc+aay*sf) 
-
-		#U
-#		aax =
-#		aay = 
-#		gcdc.DrawText('U', self.xc+aax*sf, self.yc+aay*sf) 
+		#draw amino acdids with appropriate background color
+		for AA in aminoAcids:
+			if AA in self.target: #if current AA is a selected one
+				self.gcdc.SetPen(wx.Pen(colour=self.target_color, width=0))
+				self.gcdc.SetBrush(wx.Brush(self.target_color))
+			elif AA in self.offtarget: #if it is in the off-targets list
+				self.gcdc.SetPen(wx.Pen(colour=self.offtarget_color, width=0))
+				self.gcdc.SetBrush(wx.Brush(self.offtarget_color))
+			elif AA in self.possible: #if current AA is among the ones that may be selected without further off-targets
+				self.gcdc.SetPen(wx.Pen(colour=self.possible_color, width=0))
+				self.gcdc.SetBrush(wx.Brush(self.possible_color))
+			else:					#otherwise use standard color
+				self.gcdc.SetPen(wx.Pen(colour=self.aa_background, width=0))
+				self.gcdc.SetBrush(wx.Brush(colour=(0,0,0,0)))
+			
 
 
-	def Draw_wheel(self, dc):
+
+			#if that amino acid is the highlighted one, show it
+			if AA == self.highlighted:
+				self.gcdc.SetPen(wx.Pen(colour=self.aa_highlight, width=1))
+
+			#get text extent for circle placing
+			text_extent = self.gcdc.GetTextExtent(aminoAcids[AA]['text'])
+	
+			#draw the cicle
+			self.gcdc.DrawCircle(self.xc+aminoAcids[AA]['aax']*sf+text_extent[0]/2, self.yc+aminoAcids[AA]['aay']*sf+text_extent[1]/2, pnt_size*0.9) 
+			self.gcdc.DrawText(aminoAcids[AA]['text'], self.xc+aminoAcids[AA]['aax']*sf, self.yc+aminoAcids[AA]['aay']*sf) 
+
+			#draw hidden color which is used for hittests
+			self.catalog[str(self.NextRGB()+(255,))] = AA
+			self.hidden_dc.SetPen(wx.Pen(colour=self.unique_color, width=0))
+			self.hidden_dc.SetBrush(wx.Brush(colour=self.unique_color))
+			self.hidden_dc.DrawCircle(self.xc+aminoAcids[AA]['aax']*sf+text_extent[0]/2, self.yc+aminoAcids[AA]['aay']*sf+text_extent[1]/2, pnt_size*0.9) 	
+
+
+
+	def Draw_wheel(self):
 		'''
 		This is the codon wheel view.
 		'''
@@ -370,31 +363,8 @@ class CodonView(ANTBaseDrawingClass):
 		self.xc = 850/3 #centre of codon circle in x
 		self.yc = 450/2 #centre of codon circle in y
 		self.Radius = self.yc/1.2
-		self.unique_color = (0,0,0)
 
-		dc.SetBackground(wx.Brush("White"))
-		dc.Clear() # make sure you clear the bitmap!
-		gcdc = wx.GCDC(dc) #make gcdc from the dc (for use of transparency and antialiasing)
 
-		#make a hidden dc to which features can be drawn in unique colors and later used for hittests. This drawing only exists in memory.
-		self.hidden_dc = wx.MemoryDC()
-		self.hidden_dc.SelectObject(wx.EmptyBitmap(self.ClientSize[0], self.ClientSize[1]))
-		self.hidden_dc.SetBackground(wx.Brush("White"))
-		self.hidden_dc.Clear() # make sure you clear the bitmap!
-
-		#set what colors the different fields should have
-		target_color = '#CCFF66' #chosen amino acids
-		possible_color = '#FFFF66' #amino acid that may still be chosen
-		offtarget_color = '#FF9966' #off-target amino acids
-		nucleotide_color = '#8B835F' #standard nucleotide color
-		coding_nucleotide_color = '#4B4424' #for coloring the nucleotides encoded by the degenerate codon
-		line_color = '#000000' #for lines
-		first_nuc_background = '#ffe7ab' #background of first nucleotide
-		second_nuc_background = '#ffd976' #background of second nucleotide
-		third_nuc_background = '#ffc700' #background of third nucleotide
-		aa_background = '#FFFFFF' #background color for amino acids
-		aa_highlight = '#FF0000' #highlight color for the amino acid that mouse pointer hovers over
-		
 		#These parameters determine the "thickness" of the nucleotide and amino acid sections
 		first_nucleotide_thickness = self.Radius/3.0
 		second_nucleotide_thickness = self.Radius/4.5
@@ -411,9 +381,9 @@ class CodonView(ANTBaseDrawingClass):
 		radius = first_nucleotide_thickness
 		thickness = first_nucleotide_thickness
 		font = wx.Font(pointSize=self.Radius/6.5, family=wx.FONTFAMILY_SWISS, style=wx.FONTWEIGHT_NORMAL, weight=wx.FONTWEIGHT_BOLD)
-		gcdc.SetFont(font)
-		gcdc.SetPen(wx.Pen(colour=first_nuc_background, width=1))
-		gcdc.SetBrush(wx.Brush(first_nuc_background))
+		self.gcdc.SetFont(font)
+		self.gcdc.SetPen(wx.Pen(colour=self.first_nuc_background, width=1))
+		self.gcdc.SetBrush(wx.Brush(self.first_nuc_background))
 		nucleotides = ['T', 'C', 'A', 'G']
 		
 		#do the drawing
@@ -422,19 +392,19 @@ class CodonView(ANTBaseDrawingClass):
 			start_angle = 0 + 90*i
 			finish_angle = 90+90*i
 			pointlist = self.make_arc(self.xc, self.yc, start_angle, finish_angle, radius, thickness, step=5)
-			gcdc.DrawPolygon(pointlist)
+			self.gcdc.DrawPolygon(pointlist)
 			
 			#determine text color
 			#if nucleotide is part of degenerate codon it should have a different color
-			gcdc.SetTextForeground((nucleotide_color))
+			self.gcdc.SetTextForeground((self.nucleotide_color))
 			if self.codon is not False:
 				if nucleotides[i].replace('U','T') in dna.UnAmb(self.codon[0]):
-					gcdc.SetTextForeground((coding_nucleotide_color))
+					self.gcdc.SetTextForeground((self.coding_nucleotide_color))
 			
 			#draw the text
-			text_extent = gcdc.GetTextExtent(nucleotides[i])
+			text_extent = self.gcdc.GetTextExtent(nucleotides[i])
 			x1, y1 = self.AngleToPoints(self.xc, self.yc, radius/2, finish_angle-(finish_angle-start_angle)/2) #(centre_x, centre_y, radius, angle)
-			gcdc.DrawText(nucleotides[i], x1-text_extent[0]/2, y1-text_extent[1]/2)
+			self.gcdc.DrawText(nucleotides[i], x1-text_extent[0]/2, y1-text_extent[1]/2)
 			
 			
 
@@ -450,9 +420,9 @@ class CodonView(ANTBaseDrawingClass):
 			print('The problem lies with the self.Radius/12.0. Seems like it is too small.')
 			font_size = 10
 		font = wx.Font(pointSize=self.Radius/12.0, family=wx.FONTFAMILY_SWISS, style=wx.FONTWEIGHT_NORMAL, weight=wx.FONTWEIGHT_BOLD)
-		gcdc.SetFont(font)
-		gcdc.SetPen(wx.Pen(colour=second_nuc_background, width=1))
-		gcdc.SetBrush(wx.Brush(second_nuc_background))
+		self.gcdc.SetFont(font)
+		self.gcdc.SetPen(wx.Pen(colour=self.second_nuc_background, width=1))
+		self.gcdc.SetBrush(wx.Brush(self.second_nuc_background))
 		nucleotides = ['TT', 'TC', 'TA', 'TG','CT', 'CC', 'CA', 'CG','AT', 'AC', 'AA', 'AG', 'GT', 'GC', 'GA', 'GG']
 		
 		#do the drawing
@@ -461,19 +431,19 @@ class CodonView(ANTBaseDrawingClass):
 			start_angle = 0 + 22.5*i
 			finish_angle = 22.5+22.5*i
 			pointlist = self.make_arc(self.xc, self.yc, start_angle, finish_angle, radius, thickness, step=0.5)
-			gcdc.DrawPolygon(pointlist)
+			self.gcdc.DrawPolygon(pointlist)
 			
 			#determine text color
 			#if nucleotide is part of degenerate codon it should have a different color
-			gcdc.SetTextForeground((nucleotide_color))
+			self.gcdc.SetTextForeground((self.nucleotide_color))
 			if self.codon is not False:
 				if nucleotides[i].replace('U','T') in dna.UnAmb(self.codon[0:2]):
-					gcdc.SetTextForeground((coding_nucleotide_color))
+					self.gcdc.SetTextForeground((self.coding_nucleotide_color))
 			
 			#draw the text
-			text_extent = gcdc.GetTextExtent(nucleotides[i][1])
+			text_extent = self.gcdc.GetTextExtent(nucleotides[i][1])
 			x1, y1 = self.AngleToPoints(self.xc, self.yc, first_nucleotide_thickness+second_nucleotide_thickness/2, finish_angle-(finish_angle-start_angle)/2)
-			gcdc.DrawText(nucleotides[i][1], x1-text_extent[0]/2, y1-text_extent[1]/2)
+			self.gcdc.DrawText(nucleotides[i][1], x1-text_extent[0]/2, y1-text_extent[1]/2)
 
 
 			
@@ -485,9 +455,9 @@ class CodonView(ANTBaseDrawingClass):
 		radius = first_nucleotide_thickness+second_nucleotide_thickness+third_nucleotide_thickness
 		thickness = third_nucleotide_thickness
 		font = wx.Font(pointSize=self.Radius/28.0, family=wx.FONTFAMILY_SWISS, style=wx.FONTWEIGHT_NORMAL, weight=wx.FONTWEIGHT_BOLD)
-		gcdc.SetFont(font)
-		gcdc.SetPen(wx.Pen(colour=third_nuc_background, width=1))
-		gcdc.SetBrush(wx.Brush(third_nuc_background))
+		self.gcdc.SetFont(font)
+		self.gcdc.SetPen(wx.Pen(colour=self.third_nuc_background, width=1))
+		self.gcdc.SetBrush(wx.Brush(self.third_nuc_background))
 		codons = ['TTT', 'TTC', 'TTA', 'TTG','TCT', 'TCC', 'TCA', 'TCG','TAT', 'TAC', 'TAA', 'TAG', 'TGT', 'TGC', 'TGA', 'TGG',\
 					'CTT', 'CTC', 'CTA', 'CTG','CCT', 'CCC', 'CCA', 'CCG','CAT', 'CAC', 'CAA', 'CAG', 'CGT', 'CGC', 'CGA', 'CGG',\
 					'ATT', 'ATC', 'ATA', 'ATG','ACT', 'ACC', 'ACA', 'ACG','AAT', 'AAC', 'AAA', 'AAG', 'AGT', 'AGC', 'AGA', 'AGG',\
@@ -499,19 +469,19 @@ class CodonView(ANTBaseDrawingClass):
 			start_angle = 0 + 5.625*i
 			finish_angle = 5.625+5.625*i
 			pointlist = self.make_arc(self.xc, self.yc, start_angle, finish_angle, radius, thickness, step=0.1)
-			gcdc.DrawPolygon(pointlist)
+			self.gcdc.DrawPolygon(pointlist)
 			
 			#determine text color
 			#if nucleotide is part of degenerate codon it should have a different color
-			gcdc.SetTextForeground((nucleotide_color))
+			self.gcdc.SetTextForeground((self.nucleotide_color))
 			if self.codon is not False:
 				if codons[i].replace('U','T') in dna.UnAmb(self.codon):
-					gcdc.SetTextForeground((coding_nucleotide_color))
+					self.gcdc.SetTextForeground((self.coding_nucleotide_color))
 			
 			#draw the text
-			text_extent = gcdc.GetTextExtent(codons[i][2])
+			text_extent = self.gcdc.GetTextExtent(codons[i][2])
 			x1, y1 = self.AngleToPoints(self.xc, self.yc, first_nucleotide_thickness+second_nucleotide_thickness+third_nucleotide_thickness/2, finish_angle-(finish_angle-start_angle)/2)
-			gcdc.DrawText(codons[i][2], x1-text_extent[0]/2, y1-text_extent[1]/2)
+			self.gcdc.DrawText(codons[i][2], x1-text_extent[0]/2, y1-text_extent[1]/2)
 
 			
 			
@@ -523,8 +493,8 @@ class CodonView(ANTBaseDrawingClass):
 		radius = first_nucleotide_thickness+second_nucleotide_thickness+third_nucleotide_thickness+amino_acid_thickness
 		thickness = amino_acid_thickness
 		font = wx.Font(pointSize=self.Radius/22.0, family=wx.FONTFAMILY_SWISS, style=wx.FONTWEIGHT_NORMAL, weight=wx.FONTWEIGHT_BOLD)
-		gcdc.SetFont(font)
-		gcdc.SetTextForeground(('#000000'))
+		self.gcdc.SetFont(font)
+		self.gcdc.SetTextForeground(('#000000'))
 		finish_angle = 0
 		
 		#do the drawing
@@ -540,22 +510,22 @@ class CodonView(ANTBaseDrawingClass):
 				AA_width += 1
 			else:
 				#draw the amino acid segments
-				gcdc.SetPen(wx.Pen(colour=aa_background, width=0))
+				self.gcdc.SetPen(wx.Pen(colour=self.aa_background, width=0))
 				if current_AA in self.target: #if current AA is a selected one
-					gcdc.SetPen(wx.Pen(colour=target_color, width=0))
-					gcdc.SetBrush(wx.Brush(target_color))
+					self.gcdc.SetPen(wx.Pen(colour=self.target_color, width=0))
+					self.gcdc.SetBrush(wx.Brush(self.target_color))
 				elif current_AA in self.offtarget: #if it is in the off-targets list
-					gcdc.SetPen(wx.Pen(colour=offtarget_color, width=0))
-					gcdc.SetBrush(wx.Brush(offtarget_color))
+					self.gcdc.SetPen(wx.Pen(colour=self.offtarget_color, width=0))
+					self.gcdc.SetBrush(wx.Brush(self.offtarget_color))
 				elif current_AA in self.possible: #if current AA is among the ones that may be selected without further off-targets
-					gcdc.SetPen(wx.Pen(colour=possible_color, width=0))
-					gcdc.SetBrush(wx.Brush(possible_color))
+					self.gcdc.SetPen(wx.Pen(colour=self.possible_color, width=0))
+					self.gcdc.SetBrush(wx.Brush(self.possible_color))
 				else:									#otherwise use standard color
-					gcdc.SetBrush(wx.Brush(aa_background))
+					self.gcdc.SetBrush(wx.Brush(self.aa_background))
 				start_angle = finish_angle
 				finish_angle = start_angle+5.625*AA_width
 				pointlist = self.make_arc(self.xc, self.yc, start_angle, finish_angle, radius, thickness, step=0.1)
-				gcdc.DrawPolygon(pointlist)
+				self.gcdc.DrawPolygon(pointlist)
 
 				#draw hidden color which is used for hittests
 				self.catalog[str(self.NextRGB()+(255,))] = current_AA
@@ -566,7 +536,7 @@ class CodonView(ANTBaseDrawingClass):
 
 				#draw lines
 				angle = start_angle
-				gcdc.SetPen(wx.Pen(colour=line_color, width=1))
+				self.gcdc.SetPen(wx.Pen(colour=self.line_color, width=1))
 				if angle in [0,90,180,270]:
 					radius = 0
 				elif angle % 22.5 == 0:
@@ -576,13 +546,13 @@ class CodonView(ANTBaseDrawingClass):
 				x1, y1 = self.AngleToPoints(self.xc, self.yc, radius, angle)
 				radius = radius = first_nucleotide_thickness+second_nucleotide_thickness+third_nucleotide_thickness+amino_acid_thickness
 				x2, y2 = self.AngleToPoints(self.xc, self.yc, radius, angle)
-				gcdc.DrawLine(x1, y1, x2, y2)
+				self.gcdc.DrawLine(x1, y1, x2, y2)
 
 				#draw amino acid text
 				text_angle = finish_angle-(finish_angle-start_angle)/2
 
 				if finish_angle <= 180:
-					text_extent = gcdc.GetTextExtent(protein.one_to_three(current_AA)+' (%s)' % current_AA)
+					text_extent = self.gcdc.GetTextExtent(protein.one_to_three(current_AA)+' (%s)' % current_AA)
 					text_radius = (first_nucleotide_thickness+second_nucleotide_thickness+third_nucleotide_thickness)*1.05
 
 					#need to adjust for text height. Imagine right angled triangle. Adjecent is radius. Opposite is half of the text height. Calculate tan angle.
@@ -592,9 +562,9 @@ class CodonView(ANTBaseDrawingClass):
 					text_position_angle = text_angle-degrees			
 
 					tx, ty = self.AngleToPoints(self.xc, self.yc, text_radius, text_position_angle)
-					gcdc.DrawRotatedText(protein.one_to_three(current_AA)+' (%s)' % current_AA, tx, ty, -text_angle+90)
+					self.gcdc.DrawRotatedText(protein.one_to_three(current_AA)+' (%s)' % current_AA, tx, ty, -text_angle+90)
 				else:
-					text_extent = gcdc.GetTextExtent(protein.one_to_three(current_AA)+' (%s)' % current_AA)
+					text_extent = self.gcdc.GetTextExtent(protein.one_to_three(current_AA)+' (%s)' % current_AA)
 					text_radius = (first_nucleotide_thickness+second_nucleotide_thickness+third_nucleotide_thickness)*1.05 + text_extent[0]
 
 					#need to adjust for text height. Imagine right angled triangle. Adjacent is radius. Opposite is half of the text height. Calculate tan angle.
@@ -604,7 +574,7 @@ class CodonView(ANTBaseDrawingClass):
 					text_position_angle = text_angle+degrees			
 
 					tx, ty = self.AngleToPoints(self.xc, self.yc, text_radius, text_position_angle)
-					gcdc.DrawRotatedText(protein.one_to_three(current_AA)+' (%s)' % current_AA, tx, ty, -text_angle-90)
+					self.gcdc.DrawRotatedText(protein.one_to_three(current_AA)+' (%s)' % current_AA, tx, ty, -text_angle-90)
 
 				#now re-set the parameters for the next round
 				current_AA = AA
@@ -615,8 +585,8 @@ class CodonView(ANTBaseDrawingClass):
 		## draw the highlighted amino acid (the one that the mouse hovers above) ##
 		###########################################################################
 		
-		gcdc.SetPen(wx.Pen(colour=aa_highlight, width=1))
-		gcdc.SetBrush(wx.Brush(colour=(0,0,0,0))) #transparent
+		self.gcdc.SetPen(wx.Pen(colour=self.aa_highlight, width=1))
+		self.gcdc.SetBrush(wx.Brush(colour=(0,0,0,0))) #transparent
 
 		finish_angle = 0
 		start_angle = 0		
@@ -635,11 +605,16 @@ class CodonView(ANTBaseDrawingClass):
 				finish_angle = start_angle+5.625*AA_width
 				if current_AA == self.highlighted: #if highlighted AA is the current one
 					pointlist = self.make_arc(self.xc, self.yc, start_angle, finish_angle, radius, thickness, step=0.1)
-					gcdc.DrawPolygon(pointlist)
+					self.gcdc.DrawPolygon(pointlist)
 				start_angle = finish_angle
 				current_AA = AA
 				AA_width = 1
 				
+
+
+	def Draw_codon(self):
+		'''
+		'''
 			
 			
 		###############################
@@ -649,39 +624,39 @@ class CodonView(ANTBaseDrawingClass):
 		#write what the degenerate codon is 
 		point_size = int(self.Radius/8)
 		font = wx.Font(pointSize=point_size, family=wx.FONTFAMILY_SWISS, style=wx.ITALIC, weight=wx.FONTWEIGHT_NORMAL)
-		gcdc.SetFont(font)
-		gcdc.SetTextForeground((line_color))
+		self.gcdc.SetFont(font)
+		self.gcdc.SetTextForeground((self.line_color))
 		x = 850*0.62
 		y = 450*0.08
 		text = 'Codon:'
-		gcdc.DrawText(text, x, y)
+		self.gcdc.DrawText(text, x, y)
 
 		x = 850*0.75
 		point_size = int(self.Radius/6)
 		font = wx.Font(pointSize=point_size, family=wx.FONTFAMILY_SWISS, style=wx.FONTWEIGHT_NORMAL, weight=wx.FONTWEIGHT_NORMAL)
-		gcdc.SetFont(font)
-		gcdc.SetTextForeground((coding_nucleotide_color))
+		self.gcdc.SetFont(font)
+		self.gcdc.SetTextForeground((self.coding_nucleotide_color))
 		
 		if self.codon is False:
 			text = ''
 		else:
 			text = self.codon
-		gcdc.DrawText(text, x, y)
+		self.gcdc.DrawText(text, x, y)
 
 		
 		#below the degenerate codon, list the bases it codes for
 		if self.codon is not False:
 			#get text position based on the ambigous codon
-			first_x = x + gcdc.GetTextExtent(text[0:1])[0] - gcdc.GetTextExtent(text[0])[0]/2
-			second_x = x + gcdc.GetTextExtent(text[0:2])[0] - gcdc.GetTextExtent(text[1])[0]/2
-			third_x = x + gcdc.GetTextExtent(text[0:3])[0] - gcdc.GetTextExtent(text[2])[0]/2
-			start_y = y + gcdc.GetTextExtent(text[0])[1]
+			first_x = x + self.gcdc.GetTextExtent(text[0:1])[0] - self.gcdc.GetTextExtent(text[0])[0]/2
+			second_x = x + self.gcdc.GetTextExtent(text[0:2])[0] - self.gcdc.GetTextExtent(text[1])[0]/2
+			third_x = x + self.gcdc.GetTextExtent(text[0:3])[0] - self.gcdc.GetTextExtent(text[2])[0]/2
+			start_y = y + self.gcdc.GetTextExtent(text[0])[1]
 
 			#set new text size
 			point_size = int(self.Radius/18)
 			font = wx.Font(pointSize=point_size, family=wx.FONTFAMILY_SWISS, style=wx.FONTSTYLE_ITALIC, weight=wx.FONTWEIGHT_NORMAL)
-			gcdc.SetFont(font)
-			gcdc.SetTextForeground((coding_nucleotide_color))
+			self.gcdc.SetFont(font)
+			self.gcdc.SetTextForeground((self.coding_nucleotide_color))
 
 			first = dna.UnAmb(self.codon[0])
 			second = dna.UnAmb(self.codon[1])
@@ -691,28 +666,31 @@ class CodonView(ANTBaseDrawingClass):
 			for i in range(0, len(first)):
 				text = first[i]
 				#adjust for the size of that text
-				pos_x = first_x - gcdc.GetTextExtent(text)[0]/2
-				gcdc.DrawText(text, pos_x, first_y)
+				pos_x = first_x - self.gcdc.GetTextExtent(text)[0]/2
+				self.gcdc.DrawText(text, pos_x, first_y)
 				first_y += point_size*1.2
 
 			second_y = start_y
 			for i in range(0, len(second)):
 				text = second[i]
 				#adjust for the size of that text
-				pos_x = second_x - gcdc.GetTextExtent(text)[0]/2
-				gcdc.DrawText(text, pos_x, second_y)
+				pos_x = second_x - self.gcdc.GetTextExtent(text)[0]/2
+				self.gcdc.DrawText(text, pos_x, second_y)
 				second_y += point_size*1.2
 
 			third_y = start_y
 			for i in range(0, len(third)):
 				text = third[i]
 				#adjust for the size of that text
-				pos_x = third_x - gcdc.GetTextExtent(text)[0]/2
-				gcdc.DrawText(text, pos_x, third_y)
+				pos_x = third_x - self.gcdc.GetTextExtent(text)[0]/2
+				self.gcdc.DrawText(text, pos_x, third_y)
 				third_y += point_size*1.2
 
 				
-				
+		
+	def Draw_key(self):
+		'''
+		'''
 		##############		
 		## draw key	##
 		##############
@@ -722,41 +700,48 @@ class CodonView(ANTBaseDrawingClass):
 		
 		point_size = int(self.Radius/20)
 		font = wx.Font(pointSize=point_size, family=wx.FONTFAMILY_SWISS, style=wx.FONTWEIGHT_NORMAL, weight=wx.FONTWEIGHT_NORMAL)
-		gcdc.SetFont(font)
-		gcdc.SetTextForeground(('#666666'))
+		self.gcdc.SetFont(font)
+		self.gcdc.SetTextForeground(('#666666'))
 
 		#target AA key
 		text = 'Target AA'
 		x = 10
 		y = 10
-		gcdc.SetBrush(wx.Brush(target_color))
-		gcdc.SetPen(wx.Pen(colour='#666666', width=0))
-		gcdc.DrawRectangle(x, y, width, height)
-		gcdc.DrawText(text, x+width*1.2, y)
+		self.gcdc.SetBrush(wx.Brush(self.target_color))
+		self.gcdc.SetPen(wx.Pen(colour='#666666', width=0))
+		self.gcdc.DrawRectangle(x, y, width, height)
+		self.gcdc.DrawText(text, x+width*1.2, y)
 
 		#possible AA key
 		text = 'Possible AA'
 		x = 10
 		y += point_size*1.5
-		gcdc.SetBrush(wx.Brush(possible_color))
-		gcdc.SetPen(wx.Pen(colour='#E6E65C', width=1))
-		gcdc.DrawRectangle(x, y, width, height)
-		gcdc.DrawText(text, x+width*1.2, y)
+		self.gcdc.SetBrush(wx.Brush(self.possible_color))
+		self.gcdc.SetPen(wx.Pen(colour='#E6E65C', width=1))
+		self.gcdc.DrawRectangle(x, y, width, height)
+		self.gcdc.DrawText(text, x+width*1.2, y)
 
 		#off-target AA key
 		text = 'Off-target AA'
 		x = 10
 		y += point_size*1.5
-		gcdc.SetBrush(wx.Brush(offtarget_color))
-		gcdc.SetPen(wx.Pen(colour='#666666', width=0))
-		gcdc.DrawRectangle(x, y, width, height)
-		gcdc.DrawText(text, x+width*1.2, y)
+		self.gcdc.SetBrush(wx.Brush(self.offtarget_color))
+		self.gcdc.SetPen(wx.Pen(colour='#666666', width=0))
+		self.gcdc.DrawRectangle(x, y, width, height)
+		self.gcdc.DrawText(text, x+width*1.2, y)
 
-		
-		
+
+	def Draw_graph(self):
+		'''
+		'''
 		################
 		## draw graph ##
 		################
+
+		if self.codon is False:
+			text = ' '
+		else:
+			text = self.codon
 		
 		AA_order = ('A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y', '*', 'U')
 		AA_full = {'F':'Phenylalanine', 'L':'Leucine', 'S':'Serine', 'Y':'Tyrosine', '*':'Stop', 'C':'Cysteine', 'stop2':'Stop', 'W':'Tryptophan', 'L2':'Leucine', 'P':'Proline', 'H':'Histidine', 'Q':'Glutamine', 'R':'Arginine', 'I':'Isoleucine', 'M':'Methionine', 'T':'Threonine', 'N':'Asparagine', 'K':'Lysine', 'S2':'Serine', 'R2':'Arginine', 'V':'Valine', 'A':'Alanine', 'D':'Aspartic acid', 'E':'Glutamic acid', 'G':'Glycine', 'U':'Unnatural AA'}
@@ -771,55 +756,54 @@ class CodonView(ANTBaseDrawingClass):
 		tick_size = sizex/30
 		
 		#draw background rectangle
-		gcdc.SetBrush(wx.Brush("#fff2d1"))
-		gcdc.SetPen(wx.Pen(colour=line_color, width=0))
-		gcdc.DrawRectangle(originx, originy, sizex, sizey)
+		self.gcdc.SetBrush(wx.Brush("#fff2d1"))
+		self.gcdc.SetPen(wx.Pen(colour=self.line_color, width=1))
+		self.gcdc.DrawRectangle(originx, originy, sizex, sizey)
 
 		#title
 		point_size = int(sizex/15)
 		font = wx.Font(pointSize=point_size, family=wx.FONTFAMILY_SWISS, style=wx.FONTWEIGHT_NORMAL, weight=wx.FONTWEIGHT_NORMAL)
-		gcdc.SetFont(font)
-		gcdc.SetTextForeground((line_color))
+		self.gcdc.SetFont(font)
+		self.gcdc.SetTextForeground((self.line_color))
 		title = 'Codon count for each AA'
-		gcdc.DrawText(title, originx, originy-gcdc.GetTextExtent(text)[1]*2)
+		self.gcdc.DrawText(title, originx, originy-self.gcdc.GetTextExtent(text)[1]*2)
 
 		#y labels (amino acids)		
 		point_size = int(self.Radius/23.0)
 		font = wx.Font(pointSize=point_size, family=wx.FONTFAMILY_SWISS, style=wx.FONTWEIGHT_NORMAL, weight=wx.FONTWEIGHT_NORMAL)
-		gcdc.SetFont(font)
-		gcdc.SetTextForeground((line_color))
+		self.gcdc.SetFont(font)
+		self.gcdc.SetTextForeground((self.line_color))
 		for i in range(0, 22):	
 			amino_acid = '%s(%s)' % (protein.one_to_three(AA_order[i]), AA_order[i])
-			gcdc.DrawText(amino_acid, originx-gcdc.GetTextExtent(amino_acid)[0]-tick_size, originy+(yspacing*i+yspacing/2.0)-gcdc.GetTextExtent(amino_acid)[1]/2)
+			self.gcdc.DrawText(amino_acid, originx-self.gcdc.GetTextExtent(amino_acid)[0]-tick_size, originy+(yspacing*i+yspacing/2.0)-self.gcdc.GetTextExtent(amino_acid)[1]/2)
 
 		#x labels (count)
 		for i in range(1, 7):	
-			gcdc.DrawText(str(i), originx+xspacing*i-gcdc.GetTextExtent('6')[0]/2, originy-gcdc.GetTextExtent('6')[1]-tick_size/2.0)	
+			self.gcdc.DrawText(str(i), originx+xspacing*i-self.gcdc.GetTextExtent('6')[0]/2, originy-self.gcdc.GetTextExtent('6')[1]-tick_size/2.0)	
 
 		#x ticks
 		for i in range(1, 7):
-			gcdc.DrawLine(originx+(xspacing*i), originy, originx+(xspacing*i), originy+tick_size)
-			gcdc.DrawLine(originx+(xspacing*i), originy+sizey, originx+(xspacing*i), originy+sizey-tick_size)
+			self.gcdc.DrawLine(originx+(xspacing*i), originy, originx+(xspacing*i), originy+tick_size)
+			self.gcdc.DrawLine(originx+(xspacing*i), originy+sizey, originx+(xspacing*i), originy+sizey-tick_size)
 
 #		#y ticks
 		for i in range(1, 22):
-			gcdc.DrawLine(originx, originy+(yspacing*i), originx+tick_size, originy+(yspacing*i))
-			gcdc.DrawLine(originx+sizex, originy+(yspacing*i), originx+sizex-tick_size, originy+(yspacing*i))
+			self.gcdc.DrawLine(originx, originy+(yspacing*i), originx+tick_size, originy+(yspacing*i))
+			self.gcdc.DrawLine(originx+sizex, originy+(yspacing*i), originx+sizex-tick_size, originy+(yspacing*i))
 
 		#draw bars according to how many times each AA is encoded
 		if self.codon is not False:
 			for i in range(0, 22):	
 				AA = AA_order[i]
 				if AA in self.target: #if current AA is a selected one
-					gcdc.SetBrush(wx.Brush(target_color))
+					self.gcdc.SetBrush(wx.Brush(self.target_color))
 				elif AA in self.offtarget: #if it is in the off-targets list
-					gcdc.SetBrush(wx.Brush(offtarget_color))
+					self.gcdc.SetBrush(wx.Brush(self.offtarget_color))
 				else:	
-					gcdc.SetBrush(wx.Brush('#666666'))
+					self.gcdc.SetBrush(wx.Brush('#666666'))
 
 				count = self.AA_count[AA]
-				gcdc.DrawRectangle(originx, originy+yspacing*i+yspacing*0.1, count*xspacing, yspacing*0.8) #(x, y, w, h)
-
+				self.gcdc.DrawRectangle(originx, originy+yspacing*i+yspacing*0.1, count*xspacing, yspacing*0.8) #(x, y, w, h)
 
 
 
@@ -925,12 +909,16 @@ class CodonButtonWrapper(ANTBaseClass):
 		#text input field
 		self.input_codon = wx.TextCtrl(self, id=4, size=(50,-1), style=wx.TE_RICH)
 
+		#the checkbox
+		self.AA_layout = wx.CheckBox(self, id=7, label='Amino acid properties layout')
+
 		#bind actions to buttons, text field and combobox
 		self.Bind(wx.EVT_BUTTON, self.OnReset, id=1)
 		self.Bind(wx.EVT_COMBOBOX, self.OnComboboxSelect, id=2)
 		self.Bind(wx.EVT_TEXT, self.InputCodonOnText, id=4)		
 		self.Bind(wx.EVT_BUTTON, self.OnEvaluate, id=5)
 		self.Bind(wx.EVT_BUTTON, self.OnCopy, id=6)
+		self.Bind(wx.EVT_CHECKBOX, self.OnLayout, id=7)
 		
 		#arrange buttons, text field and combobox vertically		
 		sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -940,9 +928,18 @@ class CodonButtonWrapper(ANTBaseClass):
 		sizer.Add(item=self.evaluate)
 		sizer.Add(item=self.copy, flag=wx.LEFT, border=50)
 
+		#the second row of buttons
+		sizer_2nd_row = wx.BoxSizer(wx.HORIZONTAL)
+		sizer_2nd_row.Add(item=self.AA_layout)
+#		sizer_2nd_row.Add(item=wx.StaticText(self, wx.ID_ANY, 'test'))
+		
+
+
+
 		#add buttons on top and the codon wheel on the bottom
 		sizer2 = wx.BoxSizer(wx.VERTICAL)
 		sizer2.Add(item=sizer, proportion=0, flag=wx.EXPAND)
+		sizer2.Add(item=sizer_2nd_row, proportion=0, flag=wx.EXPAND)
 		sizer2.Add(item=self.codon_view, proportion=-1, flag=wx.EXPAND)
 
 		self.SetSizer(sizer2)
@@ -1029,12 +1026,24 @@ class CodonButtonWrapper(ANTBaseClass):
 			pyperclip.copy('No selection has been made.')
 		else:
 			pyperclip.copy(self.codon_view.report)
-		
+
+
+	def OnLayout(self, evt):
+		'''
+		When the Amino acid layout checkbox is changed, read the value and update the drawing.
+		'''
+		#get checkbox state and update variable
+		sender = evt.GetEventObject()
+		self.codon_view.properties_layout = sender.GetValue()
+
+		#update drawing
+		self.update_ownUI()		
+
 		
 ##### main loop
 class MyApp(wx.App):
 	def OnInit(self):
-		frame = wx.Frame(None, -1, title="ANT", size=(900,500))
+		frame = wx.Frame(None, -1, title="ANT", size=(900,535))
 		panel =	CodonButtonWrapper(frame, -1)
 		frame.Centre()
 		frame.Show(True)

@@ -1,0 +1,34 @@
+# This is the settings file for ANT.
+# Here the user can specify which, if any codons should be excluded from the computation and also modify the user-specified codon table.
+
+
+# Define which codons should get excluded as a list of three-letter strings. 
+# For instance, a valid input is: ['CTG', 'TAA']
+# Please ensure that at least one valid codon is present for each amino acid.
+
+AAs_to_exclude = []
+
+
+
+# Specify user-defined codon table #1001. 
+# the codon table is read from top to bottom in columns.
+# code specifes the name of the codon table.
+# AAs specifies the encoded amino acid.
+# Starts specifies which codons are available as start codons (this is not currently important for the ANT functionality.
+# The user may modify code, AAs and Starts. The Base1, Base2 and Base3 variables should not be changed.
+# U is used for unnatural amino acid.
+
+code = "Standard Code With UAG Codon Reassignment (transl_table=1001)"
+AAs  =   "FFLLSSSSYY*UCC*WLLLLPPPPHHQQRRRRIIIMTTTTNNKKSSRRVVVVAAAADDEEGGGG"
+Starts = "---M---------------M---------------M----------------------------"
+Base1  = "TTTTTTTTTTTTTTTTCCCCCCCCCCCCCCCCAAAAAAAAAAAAAAAAGGGGGGGGGGGGGGGG"
+Base2  = "TTTTCCCCAAAAGGGGTTTTCCCCAAAAGGGGTTTTCCCCAAAAGGGGTTTTCCCCAAAAGGGG"
+Base3  = "TCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAG"
+
+
+
+# Specify what percentage library coverage (from 1 to 99) is desired.
+# This number is used for computing the number of clones that need to be screened.
+# The number is only used to inform the user and does not affect which degenerate codon is returned for a given amino acid selection.
+
+coverage = 95

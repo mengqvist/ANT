@@ -25,12 +25,12 @@
 #Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #
-#Get source code at: To be added....
+#Get source code at: https://github.com/mengqvist/ANT
 #
 
 
 import random
-
+import re
 
 
 def Translate(DNA, table=1):
@@ -96,26 +96,26 @@ def Translate(DNA, table=1):
 			elif any(DNA[i:(i+3)] in s for s in codons['U']): #special case allowing for unnatural AA
 				protein.append('U')
 			else:
-				raise Error, '"%s" is not a valid codon' % DNA[i:(i+3)]
+				raise ValueError, '"%s" is not a valid codon' % DNA[i:(i+3)]
 	return ''.join(protein)	
 
 
 	
-def GetCodons(AA, table=1, separate=False):
+def GetCodons(AA, table=1, separate=False, exclude=False):
 	'''
 	Get the codons for a specified AA. Returns a list of strings.
 	The variable table specifies which codon table should be used.
 	table defaults to the standard codon table 1
 	The separate variable determines whether codons for one amino acid with dissimilar first two nucleotides should be seperated out.
 	For example if separate=False the codons for L are 	['TTA', 'TTG', 'CTT', 'CTC', 'CTA', 'CTG'].
-	If separate=True they are split up as L = ['TTA', 'TTG'] and L2 = ['CTT', 'CTC', 'CTA', 'CTG']
+	If separate=True they are split up as L = ['TTA', 'TTG'] and L2 = ['CTT', 'CTC', 'CTA', 'CTG'].
+	exclude deterimes whether user-defined codons should be excluded or not. Valid values are True and False.
 	'''
 	AA = AA.upper()
-#	if separate is False: #what the heck is this if clause for?? Can I remove it?
 	assert len(AA) == 1, 'Error, function takes a single amino acid as input'
 	assert AA in 'FLSYCWPHERIMTNKVADQG*U', 'Error, %s is not a valid amino acid' % str(AA)
-	
-	codons = CodonTable(table).getCodons(separate)
+
+	codons = CodonTable(table, exclude).getCodons(separate)
 
 	return codons[AA]	
 	
@@ -319,21 +319,54 @@ class CodonTable:
 	A DNA codon object.
 	Used to retrieve codon tables and codons for specified codon tables.	
 	Pass a valid integer value when instantiating to choose which codon table to use.
+	If exclude=True then certain codons will be excluded from the lists.
 	'''
-	def __init__(self, number):
+	def __init__(self, number, exclude=False):
 		self.code = False
+		self.code_num = False
 		self.table = False
 		self.codons = False
+
+		#variable to hold user-defined data (from settings file)
+		self.settings = dict()
+
+		self.readSettings() #read settings file to get user-defined codon table and list of codons to exclude
 		self.setTable(number) #get the specified codon table (returned as list of strings)
-		self.setCodons() #convert the codon table information to codons
+		self.setCodons(exclude) #convert the codon table information to codons
 		
-	
+
+	def readSettings(self):
+		'''
+		Method which reads the settings file to get the user-defined codon table and which (if any) codons should get excluded.
+		These are stored and used when computing degenerate codons (self.remove) or if codon table 1001 is chosen (the other variables). 
+		'''
+
+		#get the settings
+		execfile('./settings.txt', self.settings)
+
+		#make sure the settings are ok
+		assert type(self.settings['code']) is str, 'Error, the Review the settings.txt file.'
+
+		assert type(self.settings['AAs_to_exclude']) is list, 'Error, the codons for exclusion must be in a list. Review the settings.txt file.' #make sure it is a list
+
+		if len(self.settings['AAs_to_exclude']) != 0: #if there are items in it
+			self.settings['AAs_to_exclude'] = [s.upper() for s in self.settings['AAs_to_exclude']] #make uppercase
+			for item in self.settings['AAs_to_exclude']:
+				assert re.match('^[ATCG]{3}$', item) != None, 'Error, %s is not a valid DNA codon to exclude. Please review the settings.txt file.' % item
+
+		for aa in 'FLSYCWPHERIMTNKVADQG*U':
+			assert aa in self.settings['AAs'], 'Error, the amino acid %s has not been specified. Review the settings.txt file.'
+ 
+		assert self.settings['Base1'] == 'TTTTTTTTTTTTTTTTCCCCCCCCCCCCCCCCAAAAAAAAAAAAAAAAGGGGGGGGGGGGGGGG', 'Error, the Base1 field is not correct. Review the settings.txt file.'
+		assert self.settings['Base2'] == 'TTTTCCCCAAAAGGGGTTTTCCCCAAAAGGGGTTTTCCCCAAAAGGGGTTTTCCCCAAAAGGGG', 'Error, the Base2 field is not correct. Review the settings.txt file.'
+		assert self.settings['Base3'] == 'TCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAG', 'Error, the Base3 field is not correct. Review the settings.txt file.'
+
+
 	def setTable(self, number):
 		'''
 		Find information for specified genetic code and use for downstream methods.
 		Method is not intended for direct use.
 		'''
-		#print('number:::::', number)
 		number = int(number)
 		
 		if number == 1:
@@ -507,55 +540,67 @@ class CodonTable:
 			Base2  = "TTTTCCCCAAAAGGGGTTTTCCCCAAAAGGGGTTTTCCCCAAAAGGGGTTTTCCCCAAAAGGGG"
 			Base3  = "TCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAG"
 			
-		## Modify to specify user-defined code. ##
-		## U should be used for un-natural amino acid. ##
 		elif number == 1001:
-			#User-Defined Genetic Code [1001]
-			code = "Standard Code With UAG Codon Reassignment (transl_table=1001)"
-			AAs  =   "FFLLSSSSYY*UCC*WLLLLPPPPHHQQRRRRIIIMTTTTNNKKSSRRVVVVAAAADDEEGGGG"
-			Starts = "---M---------------M---------------M----------------------------"
-			Base1  = "TTTTTTTTTTTTTTTTCCCCCCCCCCCCCCCCAAAAAAAAAAAAAAAAGGGGGGGGGGGGGGGG"
-			Base2  = "TTTTCCCCAAAAGGGGTTTTCCCCAAAAGGGGTTTTCCCCAAAAGGGGTTTTCCCCAAAAGGGG"
-			Base3  = "TCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAG"
-		
-		## Uncomment and modify to add further genetic codes ##
-		#elif number == ?:			
-		#	#Genetic Code [?]
-		#	code = "User-defined code (transl_table=?)"
-		#	AAs  = "????????????????????????????????????????????????????????????????"
-		#	Starts = "????????????????????????????????????????????????????????????????"
-		#	Base1  = "TTTTTTTTTTTTTTTTCCCCCCCCCCCCCCCCAAAAAAAAAAAAAAAAGGGGGGGGGGGGGGGG"
-		#	Base2  = "TTTTCCCCAAAAGGGGTTTTCCCCAAAAGGGGTTTTCCCCAAAAGGGGTTTTCCCCAAAAGGGG"
-		#	Base3  = "TCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAG"
-
+			#User-Defined Genetic Code [1001] is loaded from settings file.
+			code = self.settings['code']
+			AAs  =   self.settings['AAs']
+			Starts = self.settings['Starts']
+			Base1  = self.settings['Base1']
+			Base2  = self.settings['Base2']
+			Base3  = self.settings['Base3']
 		
 		else:
 			raise ValueError, '%s is not a valid genetic code number' % number
+		self.code_num = number
 		self.code = code
 		self.table = [code, AAs, Starts, Base1, Base2, Base3]
 	
 	
-	def setCodons(self):
+	def setCodons(self, exclude):
 		'''
-		Use a predetermined codon table to generate a dictionary of amino acids with their codons.
+		Use a predefined codon table to generate a dictionary of amino acids with their codons.
 		Method is not intended for direct use.
+		If exclude=True then certain codons will be excluded from the lists. 
+		The codons targeted for removal is read from the settings file.
 		'''
+
+		#check whether certain codons should be excluded
+		if exclude is True:
+			remove = self.settings['AAs_to_exclude']
+		else:
+			remove = []
+
+		#now get the amino acids
 		code, AAs, Starts, Base1, Base2, Base3 = self.getTable()
 		codons = {'start':[], 'F':[], 'L':[], 'S':[], 'Y':[], 'C':[], 'W':[], 'P':[], 'H':[], 'E':[], 'R':[], 'I':[], 'M':[], 'T':[], 'N':[], 'K':[], 'V':[], 'A':[], 'D':[], 'Q':[], 'G':[], '*':[], 'U':[]}
 		for aa, s, b1, b2, b3 in zip(AAs, Starts, Base1, Base2, Base3):
 			codon = b1+b2+b3
-			
-			if aa in 'FLSYCWPHERIMTNKVADQG*U':
+
+			if codon in remove:
+				continue
+			elif aa in 'FLSYCWPHERIMTNKVADQG*U':
 				codons[aa].append(codon)
 			else:
 				raise ValueError, '"%s" is not a valid amino acid' % aa
 				
 			if s != '-': #if the codon is start
 				codons['start'].append(codon)
-				
+			
+		for key in codons.keys():
+			if key != 'U':
+				assert codons[key] != [], 'Error, there is no codon assigned to amino acid %s. Revise the user-edited codon table and the codon "exclusion list" in settings.txt' % key
+			elif key == 'U' and self.code_num == 1001:
+				assert codons[key] != [], 'Error, there is no codon assigned to amino acid %s. Revise the user-edited codon table and the codon "exclusion list" in settings.txt' % key
+
+
 		self.codons = codons
 
 	######## API intended for use #########
+	def getExcluded(self):
+		'''
+		Return which codons were excluded from the computation.
+		'''
+		return self.settings['AAs_to_exclude']
 
 	def getCode(self):
 		'''

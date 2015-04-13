@@ -25,7 +25,7 @@
 #Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #
-#Get source code at: To be added....
+#Get source code at: https://github.com/mengqvist/ANT
 #
 
 from copy import deepcopy
@@ -50,7 +50,7 @@ class DegenerateCodon:
 	
 	* If a list of amino acids (as single letter code) is passed to the algorithm;
 	All possible regular codons for those amino acids are looked up and returned as a list of lists.
-	All nucleotides for first, second and third position extracted into separate lists while retaining list structure.
+	All nucleotides for first, second and third position are extracted into separate lists while retaining list structure.
 	Separately, for pos 1, 2 and 3, all degenerate nucleotides that matches at least one nucleotide in each list are found.
 	Every combination of these is then made to generate a set of possible degenerate codons.
 	Each of these are scored by converting back to "real" codons, translating to amino acids and checking against the user-defined amino acid selection.
@@ -178,6 +178,8 @@ class DegenerateCodon:
 		
 	def getExtendedAlternatives(self):
 		'''
+		To get an extended list of alternative triplets, and the amino acids they encode.
+		This list is no longer limited to codons with the same number of off-target amino acids.	
 		'''
 		return self.extendedalternatives
 		
@@ -194,20 +196,29 @@ class DegenerateCodon:
 		Retrieve a report containing all available data.
 		Output is a string.
 		'''
+		#load data from settings file		
+		temp = dict()
+		execfile('./settings.txt', temp)
+		assert type(temp['coverage']) is int, 'Error, the library coverage must be an integer between 1 and 99. Please review the settings.txt file.'
+		assert 1 <= temp['coverage'] <= 99, 'Error, the library coverage must be an integer between 1 and 99. Please review the settings.txt file.'
+
+
 		triplet = self.getTriplet()
 		codons = self.getCodons()
 		num_codons = len(codons)
 		output = 'Degenerate codon: %s\n' % triplet
 		output += 'genetic code: %s\n' % self.getTable()
-		output += 'Real codons: %s\n' % codons
-		output += 'Encoded amino acids: %s' % self.getEncoded()
+		output += 'Codons which were excluded from the computation: %s\n' % temp['AAs_to_exclude']
+		output += 'Real codons encoded by the degenerate codon: %s\n' % codons
 		output += 'Target amino acids: %s\n' % self.getTarget()
+		output += 'Encoded amino acids: %s\n' % self.getEncoded()
 		output += 'Off-target amino acids: %s\n' % self.getOffTarget()
 		output += 'Amino acids that can be added w/o further off-targets: %s\n' % self.getPossible()
 		output += 'Codons for each amino acid: %s\n' % self.getCodonsPerAA()
 		output += 'Library size (number of codons): %s\n' % num_codons
-		output += 'Clones to screen for 95%% confidence: %s\n' % int(-math.log(1-0.95)/(1/float(num_codons)))    #T=-ln(1-Pi)/Fi
+		output += 'Clones to screen for %s%% library coverage: %s\n' % (temp['coverage'], int(-math.log(1-temp['coverage']/100.0)/(1/float(num_codons))))    #T=-ln(1-Pi)/Fi
 		output += 'Alternate codons with same number of off-target amino acids: %s\n' % self.getAlternatives()
+		output += 'Alternate codons with same number or more off-target amino acids: %s\n' % self.getExtendedAlternatives()
 		return output
 		
 	################################################################
@@ -317,11 +328,12 @@ class DegenerateCodon:
 		assert all([s in 'FLSYCWPHERIMTNKVADQG*U' for s in AA_list]), 'Error, one or more of the amino acids %s are not valid.' % AA_list
 		
 		#get all codons for chosen amino acids
-		regular_triplets = [dna.GetCodons(aa, table=self.getTable(), separate=True) for aa in AA_list]
-		
+		regular_triplets = [dna.GetCodons(aa, table=self.getTable(), separate=True, exclude=True) for aa in AA_list]
+
 		#some of the codons are list of lists (happens when the amino acid has codons at different parts of the codon circle)
 		#I need to flatten this into separate lists with which go on further
 		regular_triplets = self.flatten_codon_list(regular_triplets)
+
 		best_score = None
 		all_alternatives = [] #to save the result of all possible triplets
 		for codon_list in regular_triplets:
@@ -560,6 +572,6 @@ if __name__ == '__main__':
 	else:
 		raise ValueError
 
-	#Print results, or if a file has been specified, save to file.
+
 	print(codon_object.getReport())
-	#### implement! ####
+
