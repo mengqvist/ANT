@@ -199,8 +199,8 @@ class DegenerateCodon:
 		#load data from settings file		
 		temp = dict()
 		execfile('./settings.txt', temp)
-		assert type(temp['coverage']) is int, 'Error, the library coverage must be an integer between 1 and 99. Please review the settings.txt file.'
-		assert 1 <= temp['coverage'] <= 99, 'Error, the library coverage must be an integer between 1 and 99. Please review the settings.txt file.'
+		assert type(temp['library_coverage']) is int, 'Error, the library coverage must be an integer between 1 and 99. Please review the settings.txt file.'
+		assert 1 <= temp['library_coverage'] <= 99, 'Error, the library coverage must be an integer between 1 and 99. Please review the settings.txt file.'
 
 
 		triplet = self.getTriplet()
@@ -208,7 +208,7 @@ class DegenerateCodon:
 		num_codons = len(codons)
 		output = 'Degenerate codon: %s\n' % triplet
 		output += 'genetic code: %s\n' % self.getTable()
-		output += 'Codons which were excluded from the computation: %s\n' % temp['AAs_to_exclude']
+		output += 'Codons which were excluded from the computation: %s\n' % temp['codons_to_exclude']
 		output += 'Real codons encoded by the degenerate codon: %s\n' % codons
 		output += 'Target amino acids: %s\n' % self.getTarget()
 		output += 'Encoded amino acids: %s\n' % self.getEncoded()
@@ -216,7 +216,7 @@ class DegenerateCodon:
 		output += 'Amino acids that can be added w/o further off-targets: %s\n' % self.getPossible()
 		output += 'Codons for each amino acid: %s\n' % self.getCodonsPerAA()
 		output += 'Library size (number of codons): %s\n' % num_codons
-		output += 'Clones to screen for %s%% library coverage: %s\n' % (temp['coverage'], int(-math.log(1-temp['coverage']/100.0)/(1/float(num_codons))))    #T=-ln(1-Pi)/Fi
+		output += 'Clones to screen for %s%% library coverage: %s\n' % (temp['library_coverage'], int(-math.log(1-temp['library_coverage']/100.0)/(1/float(num_codons))))    #T=-ln(1-Pi)/Fi
 		output += 'Alternate codons with same number of off-target amino acids: %s\n' % self.getAlternatives()
 		output += 'Alternate codons with same number or more off-target amino acids: %s\n' % self.getExtendedAlternatives()
 		return output

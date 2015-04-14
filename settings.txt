@@ -4,9 +4,9 @@
 
 # Define which codons should get excluded as a list of three-letter strings. 
 # For instance, a valid input is: ['CTG', 'TAA']
-# Please ensure that at least one valid codon is present for each amino acid.
+# Please ensure that at least one valid codon remains for each amino acid.
 
-AAs_to_exclude = []
+codons_to_exclude = []
 
 
 
@@ -31,4 +31,4 @@ Base3  = "TCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAG"
 # This number is used for computing the number of clones that need to be screened.
 # The number is only used to inform the user and does not affect which degenerate codon is returned for a given amino acid selection.
 
-coverage = 95
+library_coverage = 95

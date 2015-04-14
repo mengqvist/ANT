@@ -347,11 +347,11 @@ class CodonTable:
 		#make sure the settings are ok
 		assert type(self.settings['code']) is str, 'Error, the Review the settings.txt file.'
 
-		assert type(self.settings['AAs_to_exclude']) is list, 'Error, the codons for exclusion must be in a list. Review the settings.txt file.' #make sure it is a list
+		assert type(self.settings['codons_to_exclude']) is list, 'Error, the codons for exclusion must be in a list. Review the settings.txt file.' #make sure it is a list
 
-		if len(self.settings['AAs_to_exclude']) != 0: #if there are items in it
-			self.settings['AAs_to_exclude'] = [s.upper() for s in self.settings['AAs_to_exclude']] #make uppercase
-			for item in self.settings['AAs_to_exclude']:
+		if len(self.settings['codons_to_exclude']) != 0: #if there are items in it
+			self.settings['codons_to_exclude'] = [s.upper() for s in self.settings['codons_to_exclude']] #make uppercase
+			for item in self.settings['codons_to_exclude']:
 				assert re.match('^[ATCG]{3}$', item) != None, 'Error, %s is not a valid DNA codon to exclude. Please review the settings.txt file.' % item
 
 		for aa in 'FLSYCWPHERIMTNKVADQG*U':
@@ -566,7 +566,7 @@ class CodonTable:
 
 		#check whether certain codons should be excluded
 		if exclude is True:
-			remove = self.settings['AAs_to_exclude']
+			remove = self.settings['codons_to_exclude']
 		else:
 			remove = []
 
@@ -600,7 +600,7 @@ class CodonTable:
 		'''
 		Return which codons were excluded from the computation.
 		'''
-		return self.settings['AAs_to_exclude']
+		return self.settings['codons_to_exclude']
 
 	def getCode(self):
 		'''

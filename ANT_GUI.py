@@ -179,7 +179,7 @@ class CodonView(ANTBaseDrawingClass):
 		self.gcdc.SetBrush(wx.Brush((85,123,12,transparency)))
 		x = -90.70
 		y = -63.49
-		self.gcdc.DrawEllipse(self.xc+x*sf, self.yc+y*sf, 104.43*sf, 125.02*sf) 
+		self.gcdc.DrawEllipse(self.xc+x*sf, self.yc+y*sf, 115*sf, 145.02*sf) 
 
 		self.gcdc.SetTextForeground((85,123,12))
 		self.gcdc.DrawText('Hydrophobic', self.xc-114.23*sf, self.yc+-68.64*sf)
@@ -233,33 +233,33 @@ class CodonView(ANTBaseDrawingClass):
 		self.gcdc.SetPen(wx.Pen(colour=(53,0,78,255), width=wi))
 		self.gcdc.SetBrush(wx.Brush((53,0,78,transparency)))
 		x = -73.54
-		y = 25.74
-		self.gcdc.DrawEllipse(self.xc+x*sf, self.yc+y*sf, 95.60*sf, 29.42*sf) 
+		y = 35.74
+		self.gcdc.DrawEllipse(self.xc+x*sf, self.yc+y*sf, 88*sf, 29.42*sf) 
 
 		self.gcdc.SetTextForeground((53,0,78))
-		self.gcdc.DrawText('Aromatic', self.xc-118.46*sf, self.yc+43.78*sf) 
+		self.gcdc.DrawText('Aromatic', self.xc-122*sf, self.yc+48.78*sf) 
 
 
-		#charged
+		#negatively charged
 		self.gcdc.SetPen(wx.Pen(colour=(255,138,41,255), width=wi))
 		self.gcdc.SetBrush(wx.Brush((255,138,41,transparency)))
-		x = -4.93
-		y = 22.76
-		self.gcdc.DrawEllipse(self.xc+x*sf, self.yc+y*sf, 64.79*sf, 47.14*sf) 
+		x = 25
+		y = -5
+		self.gcdc.DrawEllipse(self.xc+x*sf, self.yc+y*sf, 30*sf, 35*sf) 
 
 		self.gcdc.SetTextForeground((255,138,41))
-		self.gcdc.DrawText('Charged', self.xc+74.96*sf, self.yc+57.17*sf) 
+		self.gcdc.DrawText('Neg. charge', self.xc+45*sf, self.yc+35*sf) 
 
 
-		#positive
+		#positively charged
 		self.gcdc.SetPen(wx.Pen(colour=(23,105,117,255), width=wi))
 		self.gcdc.SetBrush(wx.Brush((23,105,117,transparency)))
-		x = 1.53
+		x = -4.53
 		y = 25.31
 		self.gcdc.DrawEllipse(self.xc+x*sf, self.yc+y*sf, 40*sf, 40*sf) 
 
 		self.gcdc.SetTextForeground((23,105,117))
-		self.gcdc.DrawText('Positive', self.xc+-4.31*sf, self.yc+74.40*sf) 
+		self.gcdc.DrawText('Pos. charge', self.xc+-4.31*sf, self.yc+74.40*sf) 
  
 		#stop
 		self.gcdc.SetPen(wx.Pen(colour=(128,128,128,255), width=wi))
@@ -280,17 +280,17 @@ class CodonView(ANTBaseDrawingClass):
 		C = dict(aax = -2, aay = -24, text = 'C'),
 		V = dict(aax = -45, aay = -36, text = 'V'),
 		I = dict(aax = -64, aay = -40, text = 'I'),
-		L = dict(aax = -58, aay = -27, text = 'L'),
-		M = dict(aax = -76, aay = -5, text = 'M'),
-		F = dict(aax = -61, aay = 35, text = 'F'),
-		Y = dict(aax = -41, aay = 30, text = 'Y'),
-		W = dict(aax = -29, aay = 41, text = 'W'),
-		H = dict(aax = 7, aay = 35, text = 'H'),
-		R = dict(aax = 23, aay = 40, text = 'R'),
-		K = dict(aax = 13, aay = 50, text = 'K'),
-		D = dict(aax = 46, aay = 34, text = 'D'),
-		E = dict(aax = 44, aay = 50, text = 'E'),
-		N = dict(aax = 43, aay = -12, text = 'N'),
+		L = dict(aax = -60, aay = -25, text = 'L'),
+		M = dict(aax = -76, aay = 10, text = 'M'),
+		F = dict(aax = -61, aay = 45, text = 'F'),
+		Y = dict(aax = -36, aay = 40, text = 'Y'),
+		W = dict(aax = -24, aay = 51, text = 'W'),
+		H = dict(aax = 2, aay = 45, text = 'H'),
+		R = dict(aax = 23, aay = 45, text = 'R'),
+		K = dict(aax = 8, aay = 30, text = 'K'),
+		D = dict(aax = 32, aay = 0, text = 'D'),
+		E = dict(aax = 42, aay = 15, text = 'E'),
+		N = dict(aax = 47, aay = -16, text = 'N'),
 		Q = dict(aax = 62, aay = 12, text = 'Q'),
 		T = dict(aax = -14, aay = -6, text = 'T'))
 
@@ -380,6 +380,7 @@ class CodonView(ANTBaseDrawingClass):
 		#set parameters
 		radius = first_nucleotide_thickness
 		thickness = first_nucleotide_thickness
+		
 		font = wx.Font(pointSize=self.Radius/6.5, family=wx.FONTFAMILY_SWISS, style=wx.FONTWEIGHT_NORMAL, weight=wx.FONTWEIGHT_BOLD)
 		self.gcdc.SetFont(font)
 		self.gcdc.SetPen(wx.Pen(colour=self.first_nuc_background, width=1))
@@ -454,7 +455,7 @@ class CodonView(ANTBaseDrawingClass):
 		#set parameters
 		radius = first_nucleotide_thickness+second_nucleotide_thickness+third_nucleotide_thickness
 		thickness = third_nucleotide_thickness
-		font = wx.Font(pointSize=self.Radius/28.0, family=wx.FONTFAMILY_SWISS, style=wx.FONTWEIGHT_NORMAL, weight=wx.FONTWEIGHT_BOLD)
+		font = wx.Font(pointSize=self.Radius/25.0, family=wx.FONTFAMILY_SWISS, style=wx.FONTWEIGHT_NORMAL, weight=wx.FONTWEIGHT_BOLD)
 		self.gcdc.SetFont(font)
 		self.gcdc.SetPen(wx.Pen(colour=self.third_nuc_background, width=1))
 		self.gcdc.SetBrush(wx.Brush(self.third_nuc_background))
@@ -492,7 +493,7 @@ class CodonView(ANTBaseDrawingClass):
 		#set parameters 
 		radius = first_nucleotide_thickness+second_nucleotide_thickness+third_nucleotide_thickness+amino_acid_thickness
 		thickness = amino_acid_thickness
-		font = wx.Font(pointSize=self.Radius/22.0, family=wx.FONTFAMILY_SWISS, style=wx.FONTWEIGHT_NORMAL, weight=wx.FONTWEIGHT_BOLD)
+		font = wx.Font(pointSize=self.Radius/20.0, family=wx.FONTFAMILY_SWISS, style=wx.FONTWEIGHT_NORMAL, weight=wx.FONTWEIGHT_BOLD)
 		self.gcdc.SetFont(font)
 		self.gcdc.SetTextForeground(('#000000'))
 		finish_angle = 0
