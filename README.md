@@ -3,6 +3,12 @@
 
 =====
 
+The code is free to use, modify and re-distribute under a GPL license. If you use this tool in your research we ask that you kindly cite the following paper:
+
+"ANT: Software for Generating and Evaluating Degenerate Codons for Natural and Expanded Genetic Codes", 
+ACS Synth. Biol., 2015, 4 (8), pp 935–938, [DOI: 10.1021/acssynbio.5b00018](http://pubs.acs.org/doi/abs/10.1021/acssynbio.5b00018)
+
+
 ANT comes with a GUI and a defined API. To use the API a working installation of Python is needed. To use the GUI a working installation of wxPython is additionally needed.
 To use the API simply import ANT.py into your python shell.
 To use the gui simply run ANT_GUI.py.
