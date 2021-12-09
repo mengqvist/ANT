@@ -1,4 +1,4 @@
-#Python 3.9 update! setup.py also included for a pip install
+# Python 3.9 update! setup.py also included for a pip install
 
 #ANT
 ###Ambiguous Nucleotide Tool (ANT) is a software for generating and evaluating degenerate codons for natural and expanded genetic codes.
