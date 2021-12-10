@@ -91,7 +91,7 @@ class ANTBaseDrawingClass(ANTBaseClass):
 
     def OnPaint(self, event):
         # All that is needed here is to draw the buffer to screen
-        dc = wx.BufferedPaintDC(self, self._Buffer)
+        _ = wx.BufferedPaintDC(self, self._Buffer)
 
     def OnSize(self, event):
         # The Buffer init is done here, to make sure the buffer is always
@@ -119,7 +119,7 @@ class ANTBaseDrawingClass(ANTBaseClass):
         """
         Get next RGB color.
         """
-        if self.unique_color == None:
+        if self.unique_color is None:
             self.unique_color = (0, 0, 0)
         else:
             self.unique_color = colcol.NextRGB(self.unique_color)
@@ -207,7 +207,7 @@ class ANTBaseDrawingClass(ANTBaseClass):
         The arc can have the shape of an arrow.
         """
         pointlist = []  # for storing drawing points for polygon
-        if arrow == False:
+        if arrow is False:
             # far side of box
             i = 0
             while i <= finish_angle - start_angle:

@@ -854,34 +854,35 @@ class CodonView(ANTBaseDrawingClass):
             "*",
             "U",
         )
-        AA_full = {
-            "F": "Phenylalanine",
-            "L": "Leucine",
-            "S": "Serine",
-            "Y": "Tyrosine",
-            "*": "Stop",
-            "C": "Cysteine",
-            "stop2": "Stop",
-            "W": "Tryptophan",
-            "L2": "Leucine",
-            "P": "Proline",
-            "H": "Histidine",
-            "Q": "Glutamine",
-            "R": "Arginine",
-            "I": "Isoleucine",
-            "M": "Methionine",
-            "T": "Threonine",
-            "N": "Asparagine",
-            "K": "Lysine",
-            "S2": "Serine",
-            "R2": "Arginine",
-            "V": "Valine",
-            "A": "Alanine",
-            "D": "Aspartic acid",
-            "E": "Glutamic acid",
-            "G": "Glycine",
-            "U": "Unnatural AA",
-        }
+        # Not Used
+        # AA_full = {
+        #     "F": "Phenylalanine",
+        #     "L": "Leucine",
+        #     "S": "Serine",
+        #     "Y": "Tyrosine",
+        #     "*": "Stop",
+        #     "C": "Cysteine",
+        #     "stop2": "Stop",
+        #     "W": "Tryptophan",
+        #     "L2": "Leucine",
+        #     "P": "Proline",
+        #     "H": "Histidine",
+        #     "Q": "Glutamine",
+        #     "R": "Arginine",
+        #     "I": "Isoleucine",
+        #     "M": "Methionine",
+        #     "T": "Threonine",
+        #     "N": "Asparagine",
+        #     "K": "Lysine",
+        #     "S2": "Serine",
+        #     "R2": "Arginine",
+        #     "V": "Valine",
+        #     "A": "Alanine",
+        #     "D": "Aspartic acid",
+        #     "E": "Glutamic acid",
+        #     "G": "Glycine",
+        #     "U": "Unnatural AA",
+        # }
 
         originx = 850 * 0.75  # centre of plot in x
         originy = 450 * 0.4  # centre of plot in y
@@ -966,7 +967,7 @@ class CodonView(ANTBaseDrawingClass):
         """
         Tests whether the mouse is over any amino acid field.
         """
-        dc = wx.ClientDC(self)  # get the client dc
+        _ = wx.ClientDC(self)  # get the client dc
         x, y = self.ScreenToClient(wx.GetMousePosition())  # get coordinate of mouse event
         pixel_color = self.hidden_dc.GetPixel(x, y)  # use that coordinate to find pixel on the hidden dc
         return self.catalog.get(str(pixel_color))  # return the amino acid
@@ -1138,10 +1139,10 @@ class CodonButtonWrapper(ANTBaseClass):
 
         # if it is a valid codon, make text black and activate enable button. If not, red text and disabled button.
         m = re.match("^[GATCRYWSMKHBVDN]{3}$", codon)
-        if m != None:
+        if m is not None:
             self.input_codon.SetForegroundColour(wx.BLACK)
             self.evaluate.Enable()
-        elif m == None:
+        elif m is None:
             self.input_codon.SetForegroundColour(wx.RED)
             self.evaluate.Disable()
 
@@ -1186,7 +1187,7 @@ class CodonButtonWrapper(ANTBaseClass):
 class MyApp(wx.App):
     def OnInit(self):
         frame = wx.Frame(None, -1, title="ANT", size=(900, 535))
-        panel = CodonButtonWrapper(frame, -1)
+        _ = CodonButtonWrapper(frame, -1)
         frame.Centre()
         frame.Show(True)
         self.SetTopWindow(frame)

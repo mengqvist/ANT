@@ -67,15 +67,16 @@ def is_hex(input):
         return False
 
     regular_expression = re.compile(
-        r"""^							#match beginning of string
-										[#]{1} 						#exactly one hash
-										[0-9a-fA-F]{6}				#exactly six of the hex symbols  0 to 9, a to f (big or small)
-										$							#match end of string
-										""",
+        r"""
+            ^							#match beginning of string
+            [#]{1} 						#exactly one hash
+            [0-9a-fA-F]{6}				#exactly six of the hex symbols  0 to 9, a to f (big or small)
+            $							#match end of string
+        """,
         re.VERBOSE,
     )
 
-    if regular_expression.match(input) == None:
+    if regular_expression.match(input) is None:
         return False
     else:
         return True

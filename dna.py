@@ -26,7 +26,6 @@
 #
 
 from functools import reduce
-import random
 import re
 
 
@@ -36,7 +35,7 @@ def Translate(DNA, table=1):
     The table variable specifies which codon table should be used.
     table defaults to the standard codon table 1
     """
-    assert type(DNA) == str or type(DNA) == unicode, "Error, input sequence must be a string or unicode"
+    assert type(DNA) == str, "Error, input sequence must be a string"
     codons = CodonTable(table).getCodons()
 
     protein = []
@@ -130,7 +129,7 @@ def combine(input_list, max_total=50000):
     assert (
         total < max_total
     ), 'The sequence "%s" would result in %s total sequences, this is above the set maximum of %s sequences.' % (
-        string,
+        input_list,
         total,
         max_total,
     )
@@ -337,7 +336,8 @@ class CodonTable:
         """
 
         # get the settings
-        execfile("./settings.txt", self.settings)
+        # execfile("./settings.txt", self.settings)
+        exec(open("./settings.txt").read(), self.settings)
 
         # make sure the settings are ok
         assert type(self.settings["code"]) is str, "Error, the Review the settings.txt file."
@@ -351,7 +351,7 @@ class CodonTable:
                 s.upper() for s in self.settings["codons_to_exclude"]
             ]  # make uppercase
             for item in self.settings["codons_to_exclude"]:
-                assert re.match("^[ATCG]{3}$", item) != None, (
+                assert re.match("^[ATCG]{3}$", item) is not None, (
                     "Error, %s is not a valid DNA codon to exclude. Please review the settings.txt file." % item
                 )
 
@@ -670,8 +670,6 @@ class CodonTable:
                 firsttwolist = list(
                     set(f(self.codons[aa]))
                 )  # list of all unique first two nucleotides for an aa. For example ['TT', 'CT'] for leucine
-                # 				print('aa', aa)
-                # 				print('ftl', firsttwolist)
                 if (
                     len(firsttwolist) > 1
                 ):  # if there is more than one set of the first two nucleotides for this amino acid

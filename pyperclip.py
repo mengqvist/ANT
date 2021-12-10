@@ -159,16 +159,18 @@ elif os.name == "posix" or platform.system() == "Linux":
 
             getcb = gtkGetClipboard
             setcb = gtkSetClipboard
-        except:
+        except Exception:
             try:
+                # TODO: if this is being used PyQt5 upgrade is incentivized
                 import PyQt4.QtCore
                 import PyQt4.QtGui
+                from PyQt4.QtWidgets import QApplication
 
                 app = QApplication([])
                 cb = PyQt4.QtGui.QApplication.clipboard()
                 getcb = qtGetClipboard
                 setcb = qtSetClipboard
-            except:
+            except Exception:
                 raise Exception("Pyperclip requires the gtk or PyQt4 module installed, or the xclip command.")
 copy = setcb
 paste = getcb
